@@ -1,0 +1,36 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDE
+.vscode/
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Maven
+target/
+!.mvn/wrapper/maven-wrapper.jar
+
+# Spring Boot
+*.jar
+*.war
+*.ear
+
+# Logs
+*.log
+logs/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Node (for future frontend)
+node_modules/
+dist/
+build/
+.next/
+.nuxt/
