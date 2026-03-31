@@ -9,24 +9,31 @@ Full-stack Spring Boot application for personal finance and budget tracking.
 ## Stack
 
 - **Backend**: Java / Spring Boot, built with Maven
-- **Frontend**: TBD (add details once scaffolded)
+- **Frontend**: Angular (with Angular Material, SCSS), built with Angular CLI
 
 ## Commands
 
-Commands will be added here as the project is scaffolded. Expected pattern:
-
 ```bash
-# Build
+# Backend build
 ./mvnw clean package
 
-# Run
+# Backend run
 ./mvnw spring-boot:run
 
-# Test
+# Backend test
 ./mvnw test
 
-# Single test
+# Single backend test
 ./mvnw test -Dtest=MyTestClass#myMethod
+
+# Frontend install
+cd frontend && npm install
+
+# Frontend serve (proxies /api to localhost:8080)
+cd frontend && npx ng serve
+
+# Frontend build
+cd frontend && npx ng build
 ```
 
 ## Architecture
