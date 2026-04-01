@@ -34,6 +34,9 @@ cd frontend && npx ng serve
 
 # Frontend build
 cd frontend && npx ng build
+
+# Accessing Postgres Docker Instance
+docker exec -it budget-postgres psql -U budget
 ```
 
 ## Architecture
