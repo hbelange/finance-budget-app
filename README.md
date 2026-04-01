@@ -24,3 +24,8 @@ docker run -d --name budget-postgres \
 ```bash
 cd frontend && npx ng serve
 ```
+
+**Accessing Docker Container**
+```bash
+docker exec -it budget-postgres psql -U budget
+```
