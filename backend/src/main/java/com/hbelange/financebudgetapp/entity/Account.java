@@ -11,8 +11,14 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Column;
 
 import com.hbelange.financebudgetapp.enums.AccountType;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.NoArgsConstructor;
 
 @Entity
+@Getter
+@Setter
+@NoArgsConstructor
 public class Account {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
