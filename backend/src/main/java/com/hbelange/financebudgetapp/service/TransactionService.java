@@ -26,9 +26,17 @@ public class TransactionService {
         this.accountRepository = accountRepository;
     }
 
-    public Page<TransactionDTO> findByAccountIdAndMonth(UUID accountId, YearMonth month, Pageable pageable) {
-        return transactionRepository.findByAccountIdAndMonth(accountId, month, pageable)
-            .map(this::toDTO);
+    public Page<TransactionDTO> findAll(UUID accountId, YearMonth month, Pageable pageable) {
+        if (accountId != null && month != null) {
+            return transactionRepository.findByAccountIdAndMonth(accountId, month, pageable).map(this::toDTO);
+        }
+        if (accountId != null) {
+            return transactionRepository.findByAccountId(accountId, pageable).map(this::toDTO);
+        }
+        if (month != null) {
+            return transactionRepository.findByMonth(month, pageable).map(this::toDTO);
+        }
+        return transactionRepository.findAll(pageable).map(this::toDTO);
     }
 
     public TransactionDTO create(TransactionRequest req) {
