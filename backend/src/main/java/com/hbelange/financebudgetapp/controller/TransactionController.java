@@ -4,6 +4,10 @@ import java.time.YearMonth;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -42,10 +46,11 @@ public class TransactionController {
     }
 
     @GetMapping
-    public String getTransactions(@RequestBody @Valid TransactionRequest req,
+    public Page<TransactionDTO> getTransactions(
         @RequestParam(required = false) UUID accountId,
-        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) YearMonth month
+        @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM") YearMonth month,
+        @PageableDefault(size = 50, sort = "date", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        
+        return transactionService.findAll(accountId, month, pageable);
     }
 }
