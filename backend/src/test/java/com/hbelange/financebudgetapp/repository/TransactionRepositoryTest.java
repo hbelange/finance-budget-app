@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
@@ -11,17 +12,13 @@ import com.hbelange.financebudgetapp.entity.Account;
 import com.hbelange.financebudgetapp.entity.Transaction;
 import com.hbelange.financebudgetapp.enums.AccountType;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
 
-// Hint: @DataJpaTest loads only the JPA slice of the application (entities, repositories, H2 in-memory DB).
-// No controllers or services are loaded. The database is reset between tests automatically.
-//
-// Caution: the entity uses @Column(columnDefinition = "uuid") which is PostgreSQL syntax.
-// H2 in PostgreSQL-compatibility mode should handle it. If you see schema errors, add this
-// to src/test/resources/application-test.properties (and annotate with @ActiveProfiles("test")):
-//   spring.datasource.url=jdbc:h2:mem:testdb;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE
 @DataJpaTest
 class TransactionRepositoryTest {
 
@@ -38,52 +35,70 @@ class TransactionRepositoryTest {
 
     @BeforeEach
     void setUp() {
-        // Hint: persist two accounts and a few transactions so you can test filtering.
-        // Use accountRepository.save(...) to persist — @DataJpaTest wires the real repository.
-        // Example:
-        //   accountA = new Account(); accountA.setName("A"); accountA.setType(AccountType.CHECKING);
-        //   accountA = accountRepository.save(accountA);
-        //
-        // Then persist transactions with different accounts and dates so filter tests are meaningful.
-        // E.g., two transactions for accountA in January, one for accountB in February.
+        accountA = new Account();
+        accountA.setName("Account A");
+        accountA.setType(AccountType.CHECKING);
+        accountA = accountRepository.save(accountA);
+
+        accountB = new Account();
+        accountB.setName("Account B");
+        accountB.setType(AccountType.SAVINGS);
+        accountB = accountRepository.save(accountB);
+
+        saveTransaction(accountA, LocalDate.of(2026, 1, 1), 50.0);
+        saveTransaction(accountA, LocalDate.of(2026, 1, 10), 100.00);
+        saveTransaction(accountA, LocalDate.of(2026, 1, 20), -30.00);
+        saveTransaction(accountB, LocalDate.of(2026, 2, 5), 200.00);    
     }
 
     @Test
     void findByAccountId_returnsOnlyTransactionsForThatAccount() {
-        // Hint: call transactionRepository.findByAccountId(accountA.getId(), page).
-        // Assert that all returned transactions belong to accountA (check getContent() list).
-        // Assert that none belong to accountB.
+        Page<Transaction> result = transactionRepository.findByAccountId(accountA.getId(), page);
+        assertTrue(result.getContent().stream().allMatch(t -> t.getAccount().getId().equals(accountA.getId())));
+        assertFalse(result.getContent().stream().anyMatch(t -> t.getAccount().getId().equals(accountB.getId())));
     }
 
     @Test
     void findByDateBetween_returnsTransactionsInRange() {
-        // Hint: call findByDateBetween with a LocalDate range that covers some but not all transactions.
-        // Assert only transactions within that date range appear in the result.
+        Page<Transaction> result = transactionRepository.findByDateBetween(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31), page);
+        assertTrue(result.getContent().stream().allMatch(t -> t.getDate().isAfter(LocalDate.of(2025, 12, 31)) && t.getDate().isBefore(LocalDate.of(2026, 2, 1))));
     }
 
     @Test
     void findByMonth_returnsTransactionsForThatMonth() {
-        // Hint: findByMonth(YearMonth.of(2026, 1), page) is a default method — it calls findByDateBetween.
-        // Call it and assert only January transactions are returned.
+        Page<Transaction> result = transactionRepository.findByMonth(YearMonth.of(2026, 1), page);
+        assertTrue(result.getContent().stream().allMatch(t -> YearMonth.from(t.getDate()).equals(YearMonth.of(2026, 1))));
     }
 
     @Test
     void findByAccountIdBetween_returnsTransactionsForAccountInRange() {
-        // Hint: use findByAccountIdBetween with accountA's ID and a date range.
-        // Assert all results belong to accountA AND fall within the date range.
+        Page<Transaction> result = transactionRepository.findByAccountIdBetween(accountA.getId(), LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31), page);
+        assertTrue(result.getContent().stream().allMatch(t -> t.getAccount().getId().equals(accountA.getId()) && t.getDate().isAfter(LocalDate.of(2025, 12, 31)) && t.getDate().isBefore(LocalDate.of(2026, 2, 1))));
+
     }
 
     @Test
     void findByAccountIdAndMonth_returnsTransactionsForAccountAndMonth() {
-        // Hint: findByAccountIdAndMonth is a default method delegating to findByAccountIdBetween.
-        // Call it with accountA.getId() and YearMonth.of(2026, 1).
-        // Assert results belong to accountA and are in January.
+        Page<Transaction> result = transactionRepository.findByAccountIdAndMonth(accountA.getId(), YearMonth.of(2026, 1), page);
+        assertTrue(result.getContent().stream().allMatch(t -> t.getAccount().getId().equals(accountA.getId()) && YearMonth.from(t.getDate()).equals(YearMonth.of(2026, 1))));
     }
 
     @Test
     void findByAccountId_returnsEmpty_whenNoTransactionsForAccount() {
-        // Hint: save a fresh account with no transactions.
-        // Call findByAccountId with that new account's ID.
-        // Assert getContent() is empty.
+        Account accountC = new Account();
+        accountC.setName("Account C");
+        accountC.setType(AccountType.CHECKING);
+        accountC = accountRepository.save(accountC);
+
+        Page<Transaction> result = transactionRepository.findByAccountId(accountC.getId(), page);
+        assertTrue(result.getContent().isEmpty());
+    }
+
+    private Transaction saveTransaction(Account acct, LocalDate date, Double amount) {
+        Transaction transaction = new Transaction();
+        transaction.setAccount(acct);
+        transaction.setDate(date);
+        transaction.setAmount(new BigDecimal(amount));
+        return transactionRepository.save(transaction);
     }
 }
