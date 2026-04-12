@@ -1,14 +1,15 @@
 package com.hbelange.financebudgetapp.service;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.hbelange.financebudgetapp.dto.AccountBalance;
 import com.hbelange.financebudgetapp.dto.AccountDTO;
 import com.hbelange.financebudgetapp.dto.AccountRequest;
 import com.hbelange.financebudgetapp.entity.Account;
@@ -25,29 +26,35 @@ public class AccountService {
     }
 
     public List<AccountDTO> findAll() {
-        // Implementation to retrieve all accounts and their balances
+        List<AccountBalance> balances = accountRepository.findAllBalances();
         return accountRepository.findAll()
             .stream()
-            .map(this::toDTO)
-            .collect(Collectors.toList());
-
+            .map(a -> {
+                BigDecimal balance = balances.stream()
+                    .filter(ab -> ab.accountId().equals(a.getId()))
+                    .map(AccountBalance::balance)
+                    .findFirst()
+                    .orElse(BigDecimal.ZERO);
+                return toDTO(a, balance);
+            })
+            .toList();
     }
-    public AccountDTO create(AccountRequest req){
-        // Implementation to create a new account
+
+    public AccountDTO create(AccountRequest req) {
         Account account = new Account();
         account.setName(req.name());
         account.setType(req.type());
-        Account savedAccount = accountRepository.save(account);
-        return toDTO(savedAccount);
+        return toDTO(accountRepository.save(account), BigDecimal.ZERO);
     }
-    public AccountDTO update(UUID id, AccountRequest req){
-        // Implementation to update an existing account
-        Account account = accountRepository.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found"));
+
+    public AccountDTO update(UUID id, AccountRequest req) {
+        Account account = accountRepository.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found"));
         account.setName(req.name());
         account.setType(req.type());
-        Account savedAccount = accountRepository.save(account);
-        return toDTO(savedAccount);
+        return toDTO(accountRepository.save(account), accountRepository.findBalanceById(id));
     }
+
     public void delete(UUID id) {
         if (!accountRepository.existsById(id)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
@@ -57,13 +64,8 @@ public class AccountService {
         }
         accountRepository.deleteById(id);
     }
-    private AccountDTO toDTO(Account account) {
-        // Implementation to convert Account entity to AccountDTO, including balance retrieval
-        return new AccountDTO(
-            account.getId(),
-            account.getName(),
-            account.getType().name(),
-            accountRepository.findBalanceById(account.getId())
-        );
+
+    private AccountDTO toDTO(Account account, BigDecimal balance) {
+        return new AccountDTO(account.getId(), account.getName(), account.getType().name(), balance);
     }
 }

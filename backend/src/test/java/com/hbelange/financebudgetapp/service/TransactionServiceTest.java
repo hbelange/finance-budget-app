@@ -37,20 +37,15 @@ import static org.mockito.Mockito.when;
 
 import com.hbelange.financebudgetapp.dto.TransactionRequest;
 
-// Hint: @ExtendWith(MockitoExtension.class) tells JUnit to activate Mockito.
-// This means @Mock and @InjectMocks annotations will be processed automatically.
 @ExtendWith(MockitoExtension.class)
 class TransactionServiceTest {
 
-    // Hint: @Mock creates a fake (mock) version of the repository.
-    // The real database is never touched. You control what these return in each test.
     @Mock
     private TransactionRepository transactionRepository;
 
     @Mock
     private AccountRepository accountRepository;
 
-    // Hint: @InjectMocks creates a real TransactionService and injects the mocks above into it.
     @InjectMocks
     private TransactionService transactionService;
 

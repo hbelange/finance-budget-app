@@ -18,6 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.hbelange.financebudgetapp.dto.AccountBalance;
 import com.hbelange.financebudgetapp.dto.AccountDTO;
 import com.hbelange.financebudgetapp.dto.AccountRequest;
 import com.hbelange.financebudgetapp.entity.Account;
@@ -48,7 +49,7 @@ class AccountServiceTest {
     @Test
     void findAll_returnsAccountsWithComputedBalance() {
         when(accountRepository.findAll()).thenReturn(List.of(account));
-        when(accountRepository.findBalanceById(accountId)).thenReturn(new BigDecimal("500.00"));
+        when(accountRepository.findAllBalances()).thenReturn(List.of(new AccountBalance(accountId, new BigDecimal("500.00"))));
 
         List<AccountDTO> result = accountService.findAll();
 
@@ -61,8 +62,20 @@ class AccountServiceTest {
     }
 
     @Test
+    void findAll_returnsZeroBalance_whenAccountHasNoTransactions() {
+        when(accountRepository.findAll()).thenReturn(List.of(account));
+        when(accountRepository.findAllBalances()).thenReturn(List.of());
+
+        List<AccountDTO> result = accountService.findAll();
+
+        assertEquals(1, result.size());
+        assertEquals(BigDecimal.ZERO, result.get(0).balance());
+    }
+
+    @Test
     void findAll_returnsEmptyList_whenNoAccounts() {
         when(accountRepository.findAll()).thenReturn(List.of());
+        when(accountRepository.findAllBalances()).thenReturn(List.of());
 
         List<AccountDTO> result = accountService.findAll();
 
@@ -73,7 +86,6 @@ class AccountServiceTest {
     void create_savesAndReturnsDto() {
         AccountRequest req = new AccountRequest("New Account", AccountType.SAVINGS);
         when(accountRepository.save(any(Account.class))).thenReturn(account);
-        when(accountRepository.findBalanceById(accountId)).thenReturn(BigDecimal.ZERO);
 
         AccountDTO result = accountService.create(req);
 

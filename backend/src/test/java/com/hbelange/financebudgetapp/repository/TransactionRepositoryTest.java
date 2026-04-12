@@ -45,10 +45,10 @@ class TransactionRepositoryTest {
         accountB.setType(AccountType.SAVINGS);
         accountB = accountRepository.save(accountB);
 
-        saveTransaction(accountA, LocalDate.of(2026, 1, 1), 50.0);
-        saveTransaction(accountA, LocalDate.of(2026, 1, 10), 100.00);
-        saveTransaction(accountA, LocalDate.of(2026, 1, 20), -30.00);
-        saveTransaction(accountB, LocalDate.of(2026, 2, 5), 200.00);    
+        saveTransaction(accountA, LocalDate.of(2026, 1, 1), "50.00");
+        saveTransaction(accountA, LocalDate.of(2026, 1, 10), "100.00");
+        saveTransaction(accountA, LocalDate.of(2026, 1, 20), "-30.00");
+        saveTransaction(accountB, LocalDate.of(2026, 2, 5), "200.00");
     }
 
     @Test
@@ -94,7 +94,7 @@ class TransactionRepositoryTest {
         assertTrue(result.getContent().isEmpty());
     }
 
-    private Transaction saveTransaction(Account acct, LocalDate date, Double amount) {
+    private Transaction saveTransaction(Account acct, LocalDate date, String amount) {
         Transaction transaction = new Transaction();
         transaction.setAccount(acct);
         transaction.setDate(date);
