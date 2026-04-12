@@ -47,14 +47,14 @@ class AccountControllerTest {
     }
 
     @Test
-    void create_returns200WithDto() throws Exception {
+    void create_returns201WithDto() throws Exception {
         AccountDTO dto = new AccountDTO(ACCOUNT_ID, "Savings", "SAVINGS", BigDecimal.ZERO);
         when(accountService.create(any())).thenReturn(dto);
 
         mockMvc.perform(post("/api/accounts")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"Savings\",\"type\":\"SAVINGS\"}"))
-            .andExpect(status().isOk())
+            .andExpect(status().isCreated())
             .andExpect(jsonPath("$.id").value(ACCOUNT_ID.toString()))
             .andExpect(jsonPath("$.name").value("Savings"));
     }
@@ -99,9 +99,9 @@ class AccountControllerTest {
     }
 
     @Test
-    void delete_returns200() throws Exception {
+    void delete_returns204() throws Exception {
         mockMvc.perform(delete("/api/accounts/" + ACCOUNT_ID))
-            .andExpect(status().isOk());
+            .andExpect(status().isNoContent());
 
         verify(accountService).delete(ACCOUNT_ID);
     }

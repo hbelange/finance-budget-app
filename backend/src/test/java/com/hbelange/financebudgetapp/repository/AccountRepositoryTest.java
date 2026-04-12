@@ -9,7 +9,7 @@ import com.hbelange.financebudgetapp.entity.Account;
 import com.hbelange.financebudgetapp.entity.Transaction;
 import com.hbelange.financebudgetapp.enums.AccountType;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -40,15 +40,15 @@ class AccountRepositoryTest {
     @Test
     void findBalanceById_returnsZero_whenNoTransactions() {
         BigDecimal balance = accountRepository.findBalanceById(account.getId());
-        assertEquals(BigDecimal.ZERO, balance);
+        assertThat(balance).isEqualByComparingTo(BigDecimal.ZERO);
     }
 
     @Test
     void findBalanceById_returnsSumOfTransactions() {
-        saveTransaction(account, 100.00);
-        saveTransaction(account, -30.00);
+        saveTransaction(account, "100.00");
+        saveTransaction(account, "-30.00");
         BigDecimal balance = accountRepository.findBalanceById(account.getId());
-        assertEquals(balance, new BigDecimal("70.00")); 
+        assertThat(balance).isEqualByComparingTo("70.00");
     }
 
     @Test
@@ -58,9 +58,9 @@ class AccountRepositoryTest {
         otherAccount.setType(AccountType.SAVINGS);
         otherAccount = accountRepository.save(otherAccount);
 
-        saveTransaction(otherAccount, 50.00);
+        saveTransaction(otherAccount, "50.00");
         BigDecimal balance = accountRepository.findBalanceById(account.getId());
-        assertEquals(BigDecimal.ZERO, balance); // First account has no transactions, so balance should be zero, not 50.
+        assertThat(balance).isEqualByComparingTo(BigDecimal.ZERO);
     }
 
     // --- existsTransactionsByAccountId ---
@@ -72,7 +72,7 @@ class AccountRepositoryTest {
 
     @Test
     void existsTransactionsByAccountId_returnsTrue_whenTransactionExists() {
-        saveTransaction(account, 20.00);
+        saveTransaction(account, "20.00");
         assertTrue(accountRepository.existsTransactionsByAccountId(account.getId()));
     }
 
@@ -83,12 +83,11 @@ class AccountRepositoryTest {
         otherAccount.setType(AccountType.SAVINGS);
         otherAccount = accountRepository.save(otherAccount);
 
-        saveTransaction(otherAccount, 50.00);
+        saveTransaction(otherAccount, "50.00");
         assertFalse(accountRepository.existsTransactionsByAccountId(account.getId()));
     }
 
-    // Helper to create and save a transaction for an account
-    private Transaction saveTransaction(Account acct, Double amount) {
+    private Transaction saveTransaction(Account acct, String amount) {
         Transaction transaction = new Transaction();
         transaction.setAccount(acct);
         transaction.setDate(LocalDate.now());
