@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")" && pwd)"
+
+# --- PostgreSQL ---
+if [ "$(docker inspect -f '{{.State.Running}}' budget-postgres 2>/dev/null)" = "true" ]; then
+    echo "budget-postgres is already running."
+else
+    echo "Starting budget-postgres..."
+    if docker inspect budget-postgres &>/dev/null; then
+        docker start budget-postgres
+    else
+        docker run -d \
+            --name budget-postgres \
+            -e POSTGRES_DB=budget \
+            -e POSTGRES_USER=budget \
+            -e POSTGRES_PASSWORD=budget \
+            -p 5432:5432 \
+            postgres:16
+    fi
+
+    echo "Waiting for PostgreSQL to be ready..."
+    until docker exec budget-postgres pg_isready -U budget -d budget &>/dev/null; do
+        sleep 1
+    done
+    echo "PostgreSQL is ready."
+fi
+
+# --- Spring Boot ---
+echo "Starting Spring Boot..."
+cd "$ROOT/backend"
+./mvnw spring-boot:run &
+SPRING_PID=$!
+echo "$SPRING_PID" > "$ROOT/.spring-boot.pid"
+echo "Spring Boot started (PID $SPRING_PID). Use stop.sh to shut it down."
