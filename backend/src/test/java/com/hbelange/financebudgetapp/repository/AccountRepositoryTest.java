@@ -16,8 +16,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-// Hint: @DataJpaTest loads only the JPA layer with an in-memory database.
-// The same H2 compatibility note from TransactionRepositoryTest applies here.
 @DataJpaTest
 class AccountRepositoryTest {
 
@@ -41,11 +39,6 @@ class AccountRepositoryTest {
 
     @Test
     void findBalanceById_returnsZero_whenNoTransactions() {
-        // Hint: don't save any transactions for the account.
-        // Call accountRepository.findBalanceById(account.getId()).
-        // The query uses COALESCE(..., 0), so it should return 0, not null.
-        // Use assertEquals(BigDecimal.ZERO, result) or check compareTo(BigDecimal.ZERO) == 0
-        // (BigDecimal equality is scale-sensitive — compareTo is safer).
         BigDecimal balance = accountRepository.findBalanceById(account.getId());
         assertEquals(BigDecimal.ZERO, balance);
     }
@@ -60,9 +53,6 @@ class AccountRepositoryTest {
 
     @Test
     void findBalanceById_ignoresTransactionsFromOtherAccounts() {
-        // Hint: save a second account and a transaction for it.
-        // Call findBalanceById on the first account and assert it is still 0 (or only sums its own transactions).
-        // This verifies the WHERE clause is correct.
         Account otherAccount = new Account();
         otherAccount.setName("Other Account");
         otherAccount.setType(AccountType.SAVINGS);
@@ -99,9 +89,6 @@ class AccountRepositoryTest {
 
     // Helper to create and save a transaction for an account
     private Transaction saveTransaction(Account acct, Double amount) {
-        // Hint: use this helper in your tests to reduce boilerplate.
-        // Build a Transaction, set acct, date, and amount, then call transactionRepository.save(...).
-        // Return the saved transaction.
         Transaction transaction = new Transaction();
         transaction.setAccount(acct);
         transaction.setDate(LocalDate.now());
