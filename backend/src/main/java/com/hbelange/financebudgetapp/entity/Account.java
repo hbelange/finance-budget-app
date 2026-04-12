@@ -1,0 +1,36 @@
+package com.hbelange.financebudgetapp.entity;
+
+import java.util.UUID;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Column;
+import jakarta.persistence.Table;
+
+import com.hbelange.financebudgetapp.enums.AccountType;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Table(name = "accounts")
+@Getter
+@Setter
+@NoArgsConstructor
+public class Account {
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(columnDefinition = "uuid", updatable = false, nullable = false)
+    private UUID id;
+
+    @Column(nullable = false)
+    private String name;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private AccountType type;
+}
