@@ -6,7 +6,9 @@ import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.hbelange.financebudgetapp.dto.TransactionDTO;
 import com.hbelange.financebudgetapp.dto.TransactionRequest;
@@ -41,7 +43,7 @@ public class TransactionService {
 
     public TransactionDTO create(TransactionRequest req) {
         Account account = accountRepository.findById(req.accountId())
-            .orElseThrow(() -> new IllegalArgumentException("Account not found: " + req.accountId()));
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found: " + req.accountId()));
 
         Transaction transaction = new Transaction();
         transaction.setAccount(account);
@@ -57,11 +59,11 @@ public class TransactionService {
 
     public TransactionDTO update(UUID id, TransactionRequest req) {
         Transaction transaction = transactionRepository.findById(id)
-            .orElseThrow(() -> new IllegalArgumentException("Transaction not found: " + id));
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Transaction not found: " + id));
 
         if (!transaction.getAccount().getId().equals(req.accountId())) {
             Account account = accountRepository.findById(req.accountId())
-                .orElseThrow(() -> new IllegalArgumentException("Account not found: " + req.accountId()));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found: " + req.accountId()));
             transaction.setAccount(account);
         }
         transaction.setDate(req.date());
@@ -75,9 +77,6 @@ public class TransactionService {
     }
 
     public void delete(UUID id) {
-        if (!transactionRepository.existsById(id)) {
-            throw new IllegalArgumentException("Transaction not found: " + id);
-        }
         transactionRepository.deleteById(id);
     }
 

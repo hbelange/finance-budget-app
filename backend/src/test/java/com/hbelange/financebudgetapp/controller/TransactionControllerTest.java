@@ -3,112 +3,201 @@ package com.hbelange.financebudgetapp.controller;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.server.ResponseStatusException;
 
+import com.hbelange.financebudgetapp.dto.TransactionDTO;
 import com.hbelange.financebudgetapp.service.TransactionService;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.YearMonth;
+import java.util.List;
 import java.util.UUID;
 
-// Hint: @WebMvcTest spins up only the web layer (controller + MockMvc), not the full app.
-// The real TransactionService is replaced by a @MockitoBean, so you control what it returns.
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 @WebMvcTest(TransactionController.class)
 class TransactionControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
 
-    // Hint: @MockitoBean registers a Mockito mock as a Spring bean so the controller can inject it.
     @MockitoBean
     private TransactionService transactionService;
 
-    // Fixed IDs make test output easier to read
     private static final UUID ACCOUNT_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
     private static final UUID TRANSACTION_ID = UUID.fromString("00000000-0000-0000-0000-000000000002");
+
+    private static final TransactionDTO SAMPLE_DTO = new TransactionDTO(
+        TRANSACTION_ID, ACCOUNT_ID, LocalDate.of(2026, 1, 15),
+        "Grocery Store", null, new BigDecimal("50.00"), null, false
+    );
 
     // --- POST /api/transactions ---
 
     @Test
     void createTransaction_returns200WithDto() throws Exception {
-        // Hint: build a TransactionDTO to return from the mocked service.
-        // Use when(transactionService.create(any())).thenReturn(dto).
-        // Perform a POST to "/api/transactions" with JSON body containing accountId, date, and amount.
-        // Assert status().isOk() and jsonPath("$.id").value(TRANSACTION_ID.toString()).
-        // Hint: dates in JSON should be "yyyy-MM-dd" strings, e.g. "2026-01-15".
+        when(transactionService.create(any())).thenReturn(SAMPLE_DTO);
+
+        mockMvc.perform(post("/api/transactions")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                        "accountId": "%s",
+                        "date": "2026-01-15",
+                        "amount": "50.00"
+                    }
+                    """.formatted(ACCOUNT_ID)))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.id").value(TRANSACTION_ID.toString()))
+            .andExpect(jsonPath("$.accountId").value(ACCOUNT_ID.toString()))
+            .andExpect(jsonPath("$.amount").value(50.00));
     }
 
     @Test
     void createTransaction_returns400_whenAccountIdMissing() throws Exception {
-        // Hint: omit "accountId" from the JSON body.
-        // @NotNull on TransactionRequest.accountId means validation should reject it.
-        // Assert status().isBadRequest() — no mock setup needed, it never reaches the service.
+        mockMvc.perform(post("/api/transactions")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                        "date": "2026-01-15",
+                        "amount": "50.00"
+                    }
+                    """))
+            .andExpect(status().isBadRequest());
     }
 
     @Test
     void createTransaction_returns400_whenDateMissing() throws Exception {
-        // Hint: omit "date" from the JSON body.
-        // Similar to above — @NotNull on date triggers a 400.
+        mockMvc.perform(post("/api/transactions")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                        "accountId": "%s",
+                        "amount": "50.00"
+                    }
+                    """.formatted(ACCOUNT_ID)))
+            .andExpect(status().isBadRequest());
     }
 
     @Test
     void createTransaction_returns400_whenAmountMissing() throws Exception {
-        // Hint: omit "amount" from the JSON body.
-        // @NotNull on amount should cause a 400.
+        mockMvc.perform(post("/api/transactions")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                        "accountId": "%s",
+                        "date": "2026-01-15"
+                    }
+                    """.formatted(ACCOUNT_ID)))
+            .andExpect(status().isBadRequest());
     }
 
     // --- PUT /api/transactions/{id} ---
 
     @Test
     void updateTransaction_returns200WithDto() throws Exception {
-        // Hint: build a TransactionDTO, stub transactionService.update(eq(TRANSACTION_ID), any()).
-        // Perform a PUT to "/api/transactions/" + TRANSACTION_ID.
-        // Assert the response body has the expected field values.
+        when(transactionService.update(eq(TRANSACTION_ID), any())).thenReturn(SAMPLE_DTO);
+
+        mockMvc.perform(put("/api/transactions/" + TRANSACTION_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                        "accountId": "%s",
+                        "date": "2026-01-15",
+                        "amount": "50.00"
+                    }
+                    """.formatted(ACCOUNT_ID)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(TRANSACTION_ID.toString()))
+            .andExpect(jsonPath("$.accountId").value(ACCOUNT_ID.toString()));
     }
 
     @Test
-    void updateTransaction_returns500_whenTransactionNotFound() throws Exception {
-        // Hint: the TransactionService throws IllegalArgumentException (not ResponseStatusException).
-        // Unlike AccountService, there is no @ControllerAdvice mapping it to 404.
-        // So the controller returns 500 by default when an IllegalArgumentException is thrown.
-        // Stub transactionService.update to throw new IllegalArgumentException("Transaction not found: ...").
-        // Assert status().isInternalServerError().
-        //
-        // Follow-up to think about: would it be better to return 404 here?
-        // If so, you could add a @ControllerAdvice that maps IllegalArgumentException -> 404.
+    void updateTransaction_returns404_whenTransactionNotFound() throws Exception {
+        when(transactionService.update(eq(TRANSACTION_ID), any()))
+            .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Transaction not found: " + TRANSACTION_ID));
+
+        mockMvc.perform(put("/api/transactions/" + TRANSACTION_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                        "accountId": "%s",
+                        "date": "2026-01-15",
+                        "amount": "50.00"
+                    }
+                    """.formatted(ACCOUNT_ID)))
+            .andExpect(status().isNotFound());
     }
 
     // --- GET /api/transactions ---
 
     @Test
     void getTransactions_returns200_withNoFilters() throws Exception {
-        // Hint: the endpoint returns Page<TransactionDTO>, which serializes to a JSON object
-        // with fields: "content" (array), "totalElements", "totalPages", "size", "number".
-        // Stub transactionService.findAll(null, null, any()) to return a PageImpl containing one DTO.
-        // Hint: Pageable is passed as the third argument — use any(Pageable.class) in the stub.
-        // Perform GET "/api/transactions".
-        // Assert jsonPath("$.content[0].id").value(TRANSACTION_ID.toString()).
+        when(transactionService.findAll(isNull(), isNull(), any(Pageable.class)))
+            .thenReturn(new PageImpl<>(List.of(SAMPLE_DTO)));
+
+        mockMvc.perform(get("/api/transactions"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content[0].id").value(TRANSACTION_ID.toString()))
+            .andExpect(jsonPath("$.totalElements").value(1));
     }
 
     @Test
     void getTransactions_returns200_withAccountIdFilter() throws Exception {
-        // Hint: add a request param: .param("accountId", ACCOUNT_ID.toString()).
-        // Stub transactionService.findAll(eq(ACCOUNT_ID), isNull(), any()) to return a Page.
-        // Hint: import static org.mockito.ArgumentMatchers.isNull to match the null month param.
+        when(transactionService.findAll(eq(ACCOUNT_ID), isNull(), any(Pageable.class)))
+            .thenReturn(new PageImpl<>(List.of(SAMPLE_DTO)));
+
+        mockMvc.perform(get("/api/transactions")
+                .param("accountId", ACCOUNT_ID.toString()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content[0].accountId").value(ACCOUNT_ID.toString()));
     }
 
     @Test
     void getTransactions_returns200_withMonthFilter() throws Exception {
-        // Hint: add .param("month", "2026-01") to the GET request.
-        // The controller uses @DateTimeFormat(pattern = "yyyy-MM") to parse it as YearMonth.
-        // Stub transactionService.findAll(isNull(), eq(YearMonth.of(2026, 1)), any()).
+        when(transactionService.findAll(isNull(), eq(YearMonth.of(2026, 1)), any(Pageable.class)))
+            .thenReturn(new PageImpl<>(List.of(SAMPLE_DTO)));
+
+        mockMvc.perform(get("/api/transactions")
+                .param("month", "2026-01"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content[0].date").value("2026-01-15"));
     }
 
     @Test
     void getTransactions_returns200_withAccountIdAndMonthFilter() throws Exception {
-        // Hint: combine both params: .param("accountId", ...).param("month", "2026-01").
-        // Stub with both non-null in the matcher.
+        when(transactionService.findAll(eq(ACCOUNT_ID), eq(YearMonth.of(2026, 1)), any(Pageable.class)))
+            .thenReturn(new PageImpl<>(List.of(SAMPLE_DTO)));
+
+        mockMvc.perform(get("/api/transactions")
+                .param("accountId", ACCOUNT_ID.toString())
+                .param("month", "2026-01"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content[0].accountId").value(ACCOUNT_ID.toString()))
+            .andExpect(jsonPath("$.content[0].date").value("2026-01-15"));
+    }
+
+    // --- DELETE /api/transactions/{id} ---
+
+    @Test
+    void deleteTransaction_returns204() throws Exception {
+        mockMvc.perform(delete("/api/transactions/" + TRANSACTION_ID))
+            .andExpect(status().isNoContent());
     }
 }
