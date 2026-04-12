@@ -3,9 +3,11 @@ package com.hbelange.financebudgetapp.dto;
 import java.math.BigDecimal;
 import java.util.UUID;
 
+import com.hbelange.financebudgetapp.enums.AccountType;
+
 public record AccountDTO(
     UUID id,
     String name,
-    String type,
+    AccountType type,
     BigDecimal balance
 ) {}

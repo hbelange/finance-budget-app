@@ -57,7 +57,7 @@ class AccountServiceTest {
         AccountDTO dto = result.get(0);
         assertEquals(accountId, dto.id());
         assertEquals("Test Account", dto.name());
-        assertEquals("CHECKING", dto.type());
+        assertEquals(AccountType.CHECKING, dto.type());
         assertEquals(new BigDecimal("500.00"), dto.balance());
     }
 
@@ -104,7 +104,7 @@ class AccountServiceTest {
         AccountDTO result = accountService.update(accountId, req);
 
         assertEquals("Updated Name", result.name());
-        assertEquals("SAVINGS", result.type());
+        assertEquals(AccountType.SAVINGS, result.type());
         assertEquals(new BigDecimal("100.00"), result.balance());
     }
 
