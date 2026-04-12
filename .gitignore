@@ -34,3 +34,6 @@ dist/
 build/
 .next/
 .nuxt/
+
+# Review files
+reviews/
