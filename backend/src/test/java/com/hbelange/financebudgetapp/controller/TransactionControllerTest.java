@@ -51,7 +51,7 @@ class TransactionControllerTest {
     // --- POST /api/transactions ---
 
     @Test
-    void createTransaction_returns200WithDto() throws Exception {
+    void createTransaction_returns201WithDto() throws Exception {
         when(transactionService.create(any())).thenReturn(SAMPLE_DTO);
 
         mockMvc.perform(post("/api/transactions")
