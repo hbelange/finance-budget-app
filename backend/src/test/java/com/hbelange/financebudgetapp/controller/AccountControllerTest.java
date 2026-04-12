@@ -10,6 +10,8 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
+import com.hbelange.financebudgetapp.enums.AccountType;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -35,7 +37,7 @@ class AccountControllerTest {
 
     @Test
     void getAll_returns200WithAccountList() throws Exception {
-        AccountDTO dto = new AccountDTO(ACCOUNT_ID, "Checking", "CHECKING", new BigDecimal("100.00"));
+        AccountDTO dto = new AccountDTO(ACCOUNT_ID, "Checking", AccountType.CHECKING, new BigDecimal("100.00"));
         when(accountService.findAll()).thenReturn(List.of(dto));
 
         mockMvc.perform(get("/api/accounts"))
@@ -48,7 +50,7 @@ class AccountControllerTest {
 
     @Test
     void create_returns201WithDto() throws Exception {
-        AccountDTO dto = new AccountDTO(ACCOUNT_ID, "Savings", "SAVINGS", BigDecimal.ZERO);
+        AccountDTO dto = new AccountDTO(ACCOUNT_ID, "Savings", AccountType.SAVINGS, BigDecimal.ZERO);
         when(accountService.create(any())).thenReturn(dto);
 
         mockMvc.perform(post("/api/accounts")
@@ -77,7 +79,7 @@ class AccountControllerTest {
 
     @Test
     void update_returns200WithDto() throws Exception {
-        AccountDTO dto = new AccountDTO(ACCOUNT_ID, "Updated", "CHECKING", new BigDecimal("50.00"));
+        AccountDTO dto = new AccountDTO(ACCOUNT_ID, "Updated", AccountType.CHECKING, new BigDecimal("50.00"));
         when(accountService.update(eq(ACCOUNT_ID), any())).thenReturn(dto);
 
         mockMvc.perform(put("/api/accounts/" + ACCOUNT_ID)

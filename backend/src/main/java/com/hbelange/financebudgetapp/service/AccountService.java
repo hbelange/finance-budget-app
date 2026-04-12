@@ -66,6 +66,6 @@ public class AccountService {
     }
 
     private AccountDTO toDTO(Account account, BigDecimal balance) {
-        return new AccountDTO(account.getId(), account.getName(), account.getType().name(), balance);
+        return new AccountDTO(account.getId(), account.getName(), account.getType(), balance);
     }
 }
