@@ -1,6 +1,5 @@
 package com.hbelange.financebudgetapp.service;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -9,8 +8,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.hbelange.financebudgetapp.dto.BudgetCategoryDTO;
 import com.hbelange.financebudgetapp.dto.BudgetCategoryRequest;
-import com.hbelange.financebudgetapp.dto.BudgetCategoryViewDTO;
 import com.hbelange.financebudgetapp.dto.CategoryGroupDTO;
 import com.hbelange.financebudgetapp.dto.CategoryGroupRequest;
 import com.hbelange.financebudgetapp.entity.BudgetCategory;
@@ -33,7 +32,13 @@ public class CategoryService {
 
     public List<CategoryGroupDTO> findAllGroups() {
         return categoryGroupRepository.findAllByOrderBySortOrderAsc().stream()
-            .map(g -> new CategoryGroupDTO(g.getId(), g.getName(), List.of()))
+            .map(g -> {
+                List<BudgetCategoryDTO> categories = budgetCategoryRepository
+                    .findByGroupIdOrderBySortOrderAsc(g.getId()).stream()
+                    .map(c -> new BudgetCategoryDTO(c.getId(), c.getName()))
+                    .toList();
+                return new CategoryGroupDTO(g.getId(), g.getName(), categories);
+            })
             .toList();
     }
 
@@ -55,9 +60,9 @@ public class CategoryService {
         category.setSortOrder(0);
         budgetCategoryRepository.save(category);
 
-        List<BudgetCategoryViewDTO> categories = budgetCategoryRepository
+        List<BudgetCategoryDTO> categories = budgetCategoryRepository
             .findByGroupIdOrderBySortOrderAsc(groupId).stream()
-            .map(c -> new BudgetCategoryViewDTO(c.getId(), c.getName(), BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO))
+            .map(c -> new BudgetCategoryDTO(c.getId(), c.getName()))
             .toList();
 
         return new CategoryGroupDTO(group.getId(), group.getName(), categories);

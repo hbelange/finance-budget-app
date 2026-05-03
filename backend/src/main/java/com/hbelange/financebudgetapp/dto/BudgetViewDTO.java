@@ -5,5 +5,5 @@ import java.util.List;
 
 public record BudgetViewDTO(
     BigDecimal readyToAssign,
-    List<CategoryGroupDTO> groups
+    List<BudgetGroupDTO> groups
 ) {}

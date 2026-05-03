@@ -3,8 +3,8 @@ package com.hbelange.financebudgetapp.dto;
 import java.util.List;
 import java.util.UUID;
 
-public record CategoryGroupDTO(
+public record BudgetGroupDTO(
     UUID id,
     String name,
-    List<BudgetCategoryDTO> categories
+    List<BudgetCategoryViewDTO> categories
 ) {}

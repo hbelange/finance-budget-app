@@ -6,7 +6,6 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -19,7 +18,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.hbelange.financebudgetapp.dto.BudgetCategoryViewDTO;
+import com.hbelange.financebudgetapp.dto.BudgetCategoryDTO;
 import com.hbelange.financebudgetapp.dto.CategoryGroupDTO;
 import com.hbelange.financebudgetapp.service.CategoryService;
 
@@ -68,7 +67,7 @@ class CategoryControllerTest {
 
     @Test
     void addCategory_returns201() throws Exception {
-        BudgetCategoryViewDTO catView = new BudgetCategoryViewDTO(CAT_ID, "Rent", BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
+        BudgetCategoryDTO catView = new BudgetCategoryDTO(CAT_ID, "Rent");
         CategoryGroupDTO dto = new CategoryGroupDTO(GROUP_ID, "Housing", List.of(catView));
         when(categoryService.addCategory(eq(GROUP_ID), any())).thenReturn(dto);
 
