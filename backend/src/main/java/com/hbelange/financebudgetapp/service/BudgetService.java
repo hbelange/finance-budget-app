@@ -17,8 +17,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.hbelange.financebudgetapp.dto.AllocationRequest;
 import com.hbelange.financebudgetapp.dto.BudgetCategoryViewDTO;
+import com.hbelange.financebudgetapp.dto.BudgetGroupDTO;
 import com.hbelange.financebudgetapp.dto.BudgetViewDTO;
-import com.hbelange.financebudgetapp.dto.CategoryGroupDTO;
 import com.hbelange.financebudgetapp.dto.CategorySpent;
 import com.hbelange.financebudgetapp.repository.BudgetAllocationRepository;
 import com.hbelange.financebudgetapp.repository.BudgetCategoryRepository;
@@ -61,7 +61,7 @@ public class BudgetService {
         Map<UUID, BigDecimal> spentByCategory = transactionRepository.findSpentByCategoryForMonth(firstDay, lastDay)
             .stream().collect(Collectors.toMap(CategorySpent::categoryId, CategorySpent::spent));
 
-        List<CategoryGroupDTO> groups = categoryGroupRepository.findAllByOrderBySortOrderAsc().stream()
+        List<BudgetGroupDTO> groups = categoryGroupRepository.findAllByOrderBySortOrderAsc().stream()
             .map(g -> {
                 List<BudgetCategoryViewDTO> cats = budgetCategoryRepository
                     .findByGroupIdOrderBySortOrderAsc(g.getId()).stream()
@@ -71,7 +71,7 @@ public class BudgetService {
                         BigDecimal available = assigned.add(spent);
                         return new BudgetCategoryViewDTO(c.getId(), c.getName(), assigned, spent, available);
                     }).toList();
-                return new CategoryGroupDTO(g.getId(), g.getName(), cats);
+                return new BudgetGroupDTO(g.getId(), g.getName(), cats);
             }).toList();
 
         return new BudgetViewDTO(readyToAssign, groups);
