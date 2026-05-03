@@ -3,6 +3,7 @@ package com.hbelange.financebudgetapp.controller;
 import java.time.YearMonth;
 import java.util.UUID;
 
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -53,7 +54,7 @@ public class TransactionController {
     public Page<TransactionDTO> getTransactions(
         @RequestParam(required = false) UUID accountId,
         @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM") YearMonth month,
-        @PageableDefault(size = 50, sort = "date", direction = Sort.Direction.DESC) Pageable pageable
+        @ParameterObject @PageableDefault(size = 50, sort = "date", direction = Sort.Direction.DESC) Pageable pageable
     ) {
         return transactionService.findAll(accountId, month, pageable);
     }
