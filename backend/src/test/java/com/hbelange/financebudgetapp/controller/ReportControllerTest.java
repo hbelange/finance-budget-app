@@ -1,0 +1,89 @@
+package com.hbelange.financebudgetapp.controller;
+
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.UUID;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.http.HttpStatus;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.server.ResponseStatusException;
+
+import com.hbelange.financebudgetapp.dto.DashboardDto;
+import com.hbelange.financebudgetapp.dto.SpendingByCategoryDto;
+import com.hbelange.financebudgetapp.service.ReportService;
+
+@WebMvcTest(ReportController.class)
+class ReportControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockitoBean
+    private ReportService reportService;
+
+    private static final UUID CAT_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
+
+    @Test
+    void getDashboard_returns200WithTotals() throws Exception {
+        DashboardDto dto = new DashboardDto(
+                new BigDecimal("10000.00"),
+                new BigDecimal("3000.00"),
+                new BigDecimal("1500.00"));
+        when(reportService.getDashboard("2026-05")).thenReturn(dto);
+
+        mockMvc.perform(get("/api/reports/dashboard").param("month", "2026-05"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.netWorth").value(10000.00))
+                .andExpect(jsonPath("$.incomeThisMonth").value(3000.00))
+                .andExpect(jsonPath("$.spentThisMonth").value(1500.00));
+    }
+
+    @Test
+    void getDashboard_returns400_whenMonthInvalid() throws Exception {
+        when(reportService.getDashboard("bad-month"))
+                .thenThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid month format"));
+
+        mockMvc.perform(get("/api/reports/dashboard").param("month", "bad-month"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void getSpendingByCategory_returns200WithList() throws Exception {
+        List<SpendingByCategoryDto> result = List.of(
+                new SpendingByCategoryDto(CAT_ID, "Rent", new BigDecimal("1200.00")));
+        when(reportService.getSpendingByCategory("2026-05")).thenReturn(result);
+
+        mockMvc.perform(get("/api/reports/spending-by-category").param("month", "2026-05"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].categoryId").value(CAT_ID.toString()))
+                .andExpect(jsonPath("$[0].categoryName").value("Rent"))
+                .andExpect(jsonPath("$[0].spent").value(1200.00));
+    }
+
+    @Test
+    void getSpendingByCategory_returns200WithEmptyList_whenNoSpending() throws Exception {
+        when(reportService.getSpendingByCategory("2026-05")).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/reports/spending-by-category").param("month", "2026-05"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$").isEmpty());
+    }
+
+    @Test
+    void getSpendingByCategory_returns400_whenMonthInvalid() throws Exception {
+        when(reportService.getSpendingByCategory("bad-month"))
+                .thenThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid month format"));
+
+        mockMvc.perform(get("/api/reports/spending-by-category").param("month", "bad-month"))
+                .andExpect(status().isBadRequest());
+    }
+}
