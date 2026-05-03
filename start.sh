@@ -31,6 +31,12 @@ fi
 echo "Starting Spring Boot..."
 cd "$ROOT/backend"
 ./mvnw spring-boot:run &
-SPRING_PID=$!
+
+echo "Waiting for Spring Boot to be ready..."
+until lsof -ti:8080 &>/dev/null; do
+    sleep 1
+done
+
+SPRING_PID=$(lsof -ti:8080 | head -1)
 echo "$SPRING_PID" > "$ROOT/.spring-boot.pid"
 echo "Spring Boot started (PID $SPRING_PID). Use stop.sh to shut it down."
