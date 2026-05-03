@@ -40,4 +40,16 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
 
     @Query("SELECT NEW com.hbelange.financebudgetapp.dto.CategorySpent(t.categoryId, COALESCE(SUM(t.amount), 0)) FROM Transaction t WHERE t.categoryId IS NOT NULL AND t.date BETWEEN :start AND :end GROUP BY t.categoryId")
     List<CategorySpent> findSpentByCategoryForMonth(@Param("start") LocalDate start, @Param("end") LocalDate end);
+
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t")
+    BigDecimal sumNetWorth();
+
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.amount > 0 AND t.date BETWEEN :start AND :end")
+    BigDecimal sumIncomeForMonth(@Param("start") LocalDate start, @Param("end") LocalDate end);
+
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.amount < 0 AND t.date BETWEEN :start AND :end")
+    BigDecimal sumSpentForMonth(@Param("start") LocalDate start, @Param("end") LocalDate end);
+
+    @Query("SELECT NEW com.hbelange.financebudgetapp.dto.CategorySpent(t.categoryId, COALESCE(SUM(t.amount), 0)) FROM Transaction t WHERE t.categoryId IS NOT NULL AND t.amount < 0 AND t.date BETWEEN :start AND :end GROUP BY t.categoryId")
+    List<CategorySpent> findExpenseByCategoryForMonth(@Param("start") LocalDate start, @Param("end") LocalDate end);
 }
