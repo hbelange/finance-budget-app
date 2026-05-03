@@ -39,6 +39,11 @@ cd frontend && npx ng build
 docker exec -it budget-postgres psql -U budget
 ```
 
-## Architecture
+## Planning
 
-Architecture notes will be added here as the project takes shape.
+All project documentation will be kept in the `planning` directory
+
+The key document is PLAN.md included here:
+
+@planning/PLAN.md
+
