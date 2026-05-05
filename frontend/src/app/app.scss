@@ -1,0 +1,32 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+mat-sidenav-container {
+  height: 100%;
+}
+
+mat-sidenav {
+  width: 220px;
+}
+
+.sidenav-header {
+  padding: 16px;
+  font-size: 1rem;
+  font-weight: 500;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+}
+
+.toolbar-spacer {
+  flex: 1;
+}
+
+.page-content {
+  padding: 16px;
+}
+
+.mat-mdc-list-item.active-link {
+  background-color: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+}

@@ -1,2 +1,34 @@
-<p>Backend health: {{ healthStatus() }}</p>
-<router-outlet />
+<mat-sidenav-container>
+  <mat-sidenav mode="side" opened>
+    <div class="sidenav-header">Finance Budget</div>
+    <mat-nav-list>
+      <a mat-list-item routerLink="/budget" routerLinkActive="active-link">Budget</a>
+      <a mat-list-item routerLink="/accounts" routerLinkActive="active-link">Accounts</a>
+      <a mat-list-item routerLink="/dashboard" routerLinkActive="active-link">Dashboard</a>
+    </mat-nav-list>
+  </mat-sidenav>
+
+  <mat-sidenav-content>
+    <mat-toolbar>
+      <span>{{ pageTitle() }}</span>
+      <span class="toolbar-spacer"></span>
+      @if (showMonthSelector()) {
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-select
+            aria-label="Select month"
+            [value]="selectedMonth()"
+            (selectionChange)="onMonthChange($event.value)"
+          >
+            @for (month of availableMonths(); track month) {
+              <mat-option [value]="month">{{ formatMonth(month) }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      }
+    </mat-toolbar>
+
+    <main class="page-content">
+      <router-outlet />
+    </main>
+  </mat-sidenav-content>
+</mat-sidenav-container>
