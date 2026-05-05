@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.hbelange.financebudgetapp.dto.TransactionDTO;
+import com.hbelange.financebudgetapp.dto.TransactionDateBoundsDto;
 import com.hbelange.financebudgetapp.dto.TransactionRequest;
 import com.hbelange.financebudgetapp.service.TransactionService;
 
@@ -63,5 +64,10 @@ public class TransactionController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteTransaction(@PathVariable UUID id) {
         transactionService.delete(id);
+    }
+
+    @GetMapping("/date-bounds")
+    public TransactionDateBoundsDto getDateBounds() {
+        return transactionService.getDateBounds();
     }
 }
