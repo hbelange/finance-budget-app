@@ -7,7 +7,7 @@ import { MatSidenavContainer, MatSidenav, MatSidenavContent } from '@angular/mat
 import { MatToolbar } from '@angular/material/toolbar';
 import { MatNavList, MatListItem } from '@angular/material/list';
 import { MatFormField } from '@angular/material/form-field';
-import { MatSelect, MatSelectChange } from '@angular/material/select';
+import { MatSelect } from '@angular/material/select';
 import { MatOption } from '@angular/material/core';
 import { BudgetStateService } from './core/services/budget-state.service';
 
