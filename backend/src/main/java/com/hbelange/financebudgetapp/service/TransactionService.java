@@ -1,5 +1,6 @@
 package com.hbelange.financebudgetapp.service;
 
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.UUID;
 
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.hbelange.financebudgetapp.dto.TransactionDTO;
+import com.hbelange.financebudgetapp.dto.TransactionDateBoundsDto;
 import com.hbelange.financebudgetapp.dto.TransactionRequest;
 import com.hbelange.financebudgetapp.entity.Account;
 import com.hbelange.financebudgetapp.entity.Transaction;
@@ -78,6 +80,14 @@ public class TransactionService {
 
     public void delete(UUID id) {
         transactionRepository.deleteById(id);
+    }
+
+    public TransactionDateBoundsDto getDateBounds() {
+        LocalDate min = transactionRepository.findMinDate();
+        LocalDate max = transactionRepository.findMaxDate();
+        String first = min != null ? YearMonth.from(min).minusMonths(1).toString() : null;
+        String last = max != null ? YearMonth.from(max).plusMonths(1).toString() : null;
+        return new TransactionDateBoundsDto(first, last);
     }
 
     private TransactionDTO toDTO(Transaction transaction) {
