@@ -22,15 +22,11 @@ mat-sidenav {
   flex: 1;
 }
 
-.month-select {
-  width: 180px;
-}
-
 .page-content {
   padding: 16px;
 }
 
-.active-link {
-  background-color: var(--mat-sys-secondary-container) !important;
-  color: var(--mat-sys-on-secondary-container) !important;
+.mat-mdc-list-item.active-link {
+  background-color: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
 }
