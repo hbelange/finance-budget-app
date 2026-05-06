@@ -1,8 +1,75 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { CurrencyPipe } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
+import { MatTable, MatColumnDef, MatHeaderCellDef, MatCellDef, MatHeaderRowDef, MatRowDef, MatHeaderCell, MatCell, MatHeaderRow, MatRow } from '@angular/material/table';
+import { MatButton, MatIconButton } from '@angular/material/button';
+import { MatIcon } from '@angular/material/icon';
+import { MatDialog } from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { Account, AccountService, ACCOUNT_TYPE_LABELS } from '../core/services/account.service';
+import { AccountDialogComponent } from './account-dialog.component';
+import { ConfirmDialogComponent } from './confirm-dialog.component';
 
 @Component({
   selector: 'app-accounts-list',
-  template: `<p>Accounts — coming in FBA-8</p>`,
-  changeDetection: ChangeDetectionStrategy.OnPush
+  imports: [RouterLink, CurrencyPipe, MatTable, MatColumnDef, MatHeaderCellDef, MatCellDef, MatHeaderRowDef, MatRowDef, MatHeaderCell, MatCell, MatHeaderRow, MatRow, MatButton, MatIconButton, MatIcon],
+  templateUrl: './accounts-list.component.html',
+  styleUrl: './accounts-list.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export default class AccountsListComponent {}
+export default class AccountsListComponent implements OnInit {
+  private readonly accountService = inject(AccountService);
+  private readonly dialog = inject(MatDialog);
+  private readonly snackBar = inject(MatSnackBar);
+
+  protected readonly accounts = signal<Account[]>([]);
+  protected readonly displayedColumns = ['name', 'type', 'balance', 'actions'];
+  protected readonly typeLabels: Record<string, string> = ACCOUNT_TYPE_LABELS;
+
+  ngOnInit(): void {
+    this.loadAccounts();
+  }
+
+  protected openCreateDialog(): void {
+    this.dialog.open(AccountDialogComponent, { data: null })
+      .afterClosed()
+      .subscribe((account: Account | undefined) => {
+        if (account) this.accounts.update(list => [...list, account]);
+      });
+  }
+
+  protected openEditDialog(account: Account): void {
+    this.dialog.open(AccountDialogComponent, { data: account })
+      .afterClosed()
+      .subscribe((updated: Account | undefined) => {
+        if (updated) this.accounts.update(list => list.map(a => a.id === updated.id ? updated : a));
+      });
+  }
+
+  protected confirmDelete(account: Account): void {
+    this.dialog.open(ConfirmDialogComponent, { data: { message: `Delete "${account.name}"? This cannot be undone.` } })
+      .afterClosed()
+      .subscribe((confirmed: boolean | undefined) => {
+        if (confirmed) this.deleteAccount(account);
+      });
+  }
+
+  private deleteAccount(account: Account): void {
+    this.accountService.deleteAccount(account.id).subscribe({
+      next: () => this.accounts.update(list => list.filter(a => a.id !== account.id)),
+      error: (err: HttpErrorResponse) => {
+        if (err.status === 409) {
+          this.snackBar.open('Remove all transactions from this account before deleting.', 'OK', { duration: 5000 });
+        }
+      },
+    });
+  }
+
+  private loadAccounts(): void {
+    this.accountService.getAccounts().subscribe({
+      next: accounts => this.accounts.set(accounts),
+      error: () => this.snackBar.open('Failed to load accounts.', 'OK', { duration: 5000 }),
+    });
+  }
+}
