@@ -1,0 +1,45 @@
+<div class="page-header">
+  <button mat-flat-button (click)="openCreateDialog()">Add Account</button>
+</div>
+
+<mat-table [dataSource]="accounts()">
+
+  <ng-container matColumnDef="name">
+    <mat-header-cell *matHeaderCellDef>Name</mat-header-cell>
+    <mat-cell *matCellDef="let account">
+      <a [routerLink]="['/accounts', account.id, 'transactions']">{{ account.name }}</a>
+    </mat-cell>
+  </ng-container>
+
+  <ng-container matColumnDef="type">
+    <mat-header-cell *matHeaderCellDef>Type</mat-header-cell>
+    <mat-cell *matCellDef="let account">{{ typeLabels[account.type] }}</mat-cell>
+  </ng-container>
+
+  <ng-container matColumnDef="balance">
+    <mat-header-cell *matHeaderCellDef>Balance</mat-header-cell>
+    <mat-cell *matCellDef="let account">
+      <span
+        [class.positive]="account.balance > 0"
+        [class.negative]="account.balance < 0"
+        [class.neutral]="account.balance === 0"
+      >{{ account.balance | currency }}</span>
+    </mat-cell>
+  </ng-container>
+
+  <ng-container matColumnDef="actions">
+    <mat-header-cell *matHeaderCellDef></mat-header-cell>
+    <mat-cell *matCellDef="let account">
+      <button mat-icon-button (click)="openEditDialog(account)" aria-label="Edit account">
+        <mat-icon>edit</mat-icon>
+      </button>
+      <button mat-icon-button (click)="confirmDelete(account)" aria-label="Delete account">
+        <mat-icon>delete</mat-icon>
+      </button>
+    </mat-cell>
+  </ng-container>
+
+  <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+  <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
+
+</mat-table>
