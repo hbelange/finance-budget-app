@@ -1,0 +1,54 @@
+:host {
+  display: block;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.account-title {
+  font-size: 1.25rem;
+  font-weight: 500;
+  margin: 0;
+}
+
+mat-table {
+  width: 100%;
+}
+
+.mat-column-date {
+  max-width: 130px;
+}
+
+.mat-column-amount {
+  max-width: 120px;
+  justify-content: flex-end;
+}
+
+.mat-column-cleared {
+  max-width: 80px;
+}
+
+.mat-column-actions {
+  width: 96px;
+  justify-content: flex-end;
+}
+
+.positive {
+  color: #2e7d32;
+}
+
+.negative {
+  color: var(--mat-sys-error);
+}
+
+.cleared {
+  color: #2e7d32;
+}
+
+.uncleared {
+  color: var(--mat-sys-on-surface-variant);
+}
