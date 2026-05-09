@@ -3,6 +3,23 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 PID_FILE="$ROOT/.spring-boot.pid"
+FRONTEND_PID_FILE="$ROOT/.frontend.pid"
+
+# --- Angular ---
+if [ -f "$FRONTEND_PID_FILE" ]; then
+    PID=$(cat "$FRONTEND_PID_FILE")
+    if kill -0 "$PID" 2>/dev/null; then
+        echo "Stopping Angular (PID $PID)..."
+        kill "$PID"
+        rm -f "$FRONTEND_PID_FILE"
+        echo "Angular stopped."
+    else
+        echo "Angular process $PID is not running. Cleaning up PID file."
+        rm -f "$FRONTEND_PID_FILE"
+    fi
+else
+    echo "No Angular PID file found. Nothing to stop."
+fi
 
 # --- Spring Boot ---
 if [ -f "$PID_FILE" ]; then
