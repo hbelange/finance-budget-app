@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButton } from '@angular/material/button';
-import { MatError, MatFormField, MatLabel } from '@angular/material/form-field';
+import { MatError, MatFormField, MatLabel, MatSuffix } from '@angular/material/form-field';
 import { MatInput } from '@angular/material/input';
 import { MatOptgroup, MatOption } from '@angular/material/core';
 import { MatSelect } from '@angular/material/select';
@@ -35,7 +35,7 @@ function toDateStr(date: Date): string {
     ReactiveFormsModule,
     MatDialogModule,
     MatButton,
-    MatFormField, MatLabel, MatError,
+    MatFormField, MatLabel, MatError, MatSuffix,
     MatInput,
     MatSelect, MatOption, MatOptgroup,
     MatCheckbox,
