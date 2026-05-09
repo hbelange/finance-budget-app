@@ -39,4 +39,17 @@ done
 
 SPRING_PID=$(lsof -ti:8080 | head -1)
 echo "$SPRING_PID" > "$ROOT/.spring-boot.pid"
-echo "Spring Boot started (PID $SPRING_PID). Use stop.sh to shut it down."
+echo "Spring Boot started (PID $SPRING_PID)."
+
+# --- Angular ---
+echo "Starting Angular..."
+cd "$ROOT/frontend"
+npx ng serve &
+ANGULAR_PID=$!
+echo "$ANGULAR_PID" > "$ROOT/.frontend.pid"
+
+echo "Waiting for Angular to be ready..."
+until lsof -ti:4200 &>/dev/null; do
+    sleep 1
+done
+echo "Angular started (PID $ANGULAR_PID). Use stop.sh to shut everything down."

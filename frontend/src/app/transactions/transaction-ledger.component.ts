@@ -1,8 +1,132 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, computed, effect, inject, OnInit, signal, ViewChild } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+import { CurrencyPipe, DatePipe } from '@angular/common';
+import { toSignal } from '@angular/core/rxjs-interop';
+import {
+  MatCell, MatCellDef, MatColumnDef, MatHeaderCell, MatHeaderCellDef,
+  MatHeaderRow, MatHeaderRowDef, MatRow, MatRowDef, MatTable, MatTableDataSource,
+} from '@angular/material/table';
+import { MatSort, MatSortHeader } from '@angular/material/sort';
+import { MatPaginator } from '@angular/material/paginator';
+import { MatDialog } from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatButton, MatIconButton } from '@angular/material/button';
+import { MatIcon } from '@angular/material/icon';
+import { Account, AccountService } from '../core/services/account.service';
+import { CategoryGroup, CategoryService } from '../core/services/category.service';
+import { Transaction, TransactionService } from '../core/services/transaction.service';
+import { BudgetStateService } from '../core/services/budget-state.service';
+import { TransactionDialogComponent, TransactionDialogData } from './transaction-dialog.component';
+import { ConfirmDialogComponent } from '../accounts/confirm-dialog.component';
 
 @Component({
   selector: 'app-transaction-ledger',
-  template: `<p>Transactions — coming in FBA-9</p>`,
-  changeDetection: ChangeDetectionStrategy.OnPush
+  imports: [
+    DatePipe, CurrencyPipe,
+    MatTable, MatColumnDef,
+    MatHeaderCell, MatHeaderCellDef,
+    MatCell, MatCellDef,
+    MatHeaderRow, MatHeaderRowDef,
+    MatRow, MatRowDef,
+    MatSort, MatSortHeader,
+    MatPaginator,
+    MatButton, MatIconButton,
+    MatIcon,
+  ],
+  templateUrl: './transaction-ledger.component.html',
+  styleUrl: './transaction-ledger.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export default class TransactionLedgerComponent {}
+export default class TransactionLedgerComponent implements OnInit, AfterViewInit {
+  private readonly route = inject(ActivatedRoute);
+  private readonly accountService = inject(AccountService);
+  private readonly categoryService = inject(CategoryService);
+  private readonly transactionService = inject(TransactionService);
+  private readonly budgetState = inject(BudgetStateService);
+  private readonly dialog = inject(MatDialog);
+  private readonly snackBar = inject(MatSnackBar);
+
+  private readonly accountId = this.route.snapshot.paramMap.get('id')!;
+  private readonly month = toSignal(this.budgetState.month$, { requireSync: true });
+
+  protected readonly account = signal<Account | null>(null);
+  protected readonly categories = signal<CategoryGroup[]>([]);
+  protected readonly categoryMap = computed(() => {
+    const map = new Map<string, string>();
+    this.categories().forEach(g => g.categories.forEach(c => map.set(c.id, c.name)));
+    return map;
+  });
+  protected readonly dataSource = new MatTableDataSource<Transaction>();
+  protected readonly displayedColumns = ['date', 'payee', 'category', 'memo', 'amount', 'cleared', 'actions'];
+
+  @ViewChild(MatPaginator) private paginator!: MatPaginator;
+  @ViewChild(MatSort) private sort!: MatSort;
+
+  private readonly _monthEffect = effect(() => this.loadTransactions(this.month()));
+
+  ngOnInit(): void {
+    this.loadAccount();
+    this.loadCategories();
+  }
+
+  ngAfterViewInit(): void {
+    this.dataSource.paginator = this.paginator;
+    this.dataSource.sort = this.sort;
+  }
+
+  protected openCreateDialog(): void {
+    const data: TransactionDialogData = { transaction: null, accountId: this.accountId, categories: this.categories() };
+    this.dialog.open(TransactionDialogComponent, { data })
+      .afterClosed()
+      .subscribe((t: Transaction | undefined) => {
+        if (t) this.dataSource.data = [...this.dataSource.data, t];
+      });
+  }
+
+  protected openEditDialog(transaction: Transaction): void {
+    const data: TransactionDialogData = { transaction, accountId: this.accountId, categories: this.categories() };
+    this.dialog.open(TransactionDialogComponent, { data })
+      .afterClosed()
+      .subscribe((updated: Transaction | undefined) => {
+        if (updated) {
+          this.dataSource.data = this.dataSource.data.map(t => t.id === updated.id ? updated : t);
+        }
+      });
+  }
+
+  protected confirmDelete(transaction: Transaction): void {
+    this.dialog.open(ConfirmDialogComponent, { data: { message: 'Delete this transaction? This cannot be undone.' } })
+      .afterClosed()
+      .subscribe((confirmed: boolean | undefined) => {
+        if (confirmed) this.deleteTransaction(transaction);
+      });
+  }
+
+  private loadAccount(): void {
+    this.accountService.getAccounts().subscribe({
+      next: accounts => this.account.set(accounts.find(a => a.id === this.accountId) ?? null),
+      error: () => this.snackBar.open('Failed to load account.', 'OK', { duration: 5000 }),
+    });
+  }
+
+  private loadCategories(): void {
+    this.categoryService.getCategories().subscribe({
+      next: groups => this.categories.set(groups),
+      error: () => this.snackBar.open('Failed to load categories.', 'OK', { duration: 5000 }),
+    });
+  }
+
+  private loadTransactions(month: string): void {
+    this.transactionService.getTransactions(this.accountId, month).subscribe({
+      next: transactions => { this.dataSource.data = transactions; },
+      error: () => this.snackBar.open('Failed to load transactions.', 'OK', { duration: 5000 }),
+    });
+  }
+
+  private deleteTransaction(transaction: Transaction): void {
+    this.transactionService.deleteTransaction(transaction.id).subscribe({
+      next: () => { this.dataSource.data = this.dataSource.data.filter(t => t.id !== transaction.id); },
+      error: () => this.snackBar.open('Failed to delete transaction.', 'OK', { duration: 5000 }),
+    });
+  }
+}
