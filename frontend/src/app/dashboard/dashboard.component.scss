@@ -1,0 +1,92 @@
+:host {
+  display: block;
+}
+
+.tiles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.tile-card {
+  mat-card-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 20px;
+    margin-bottom: 0;
+  }
+}
+
+.tile-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.tile-value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.tile-sub {
+  font-size: 0.875rem;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.positive {
+  color: #2e7d32;
+}
+
+.negative {
+  color: var(--mat-sys-error);
+}
+
+.spending-section {
+  margin-top: 8px;
+}
+
+.section-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0 0 16px;
+}
+
+.spending-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.spending-row {
+  display: grid;
+  grid-template-columns: 180px 1fr 100px;
+  align-items: center;
+  gap: 16px;
+}
+
+.spending-name {
+  font-size: 0.875rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.spending-amount {
+  font-size: 0.875rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.empty-state {
+  font-size: 0.875rem;
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0;
+}
