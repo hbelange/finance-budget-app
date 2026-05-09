@@ -37,6 +37,7 @@
                     min="0"
                     [value]="cat.assigned"
                     (blur)="onAssignedBlur(group.id, cat.id, $event)"
+                    (keydown.enter)="onAssignedEnter($event)"
                   />
                 </td>
                 <td class="col-number spent">{{ abs(cat.spent) | currency }}</td>

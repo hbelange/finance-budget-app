@@ -42,6 +42,10 @@ export default class BudgetComponent {
     return Math.abs(n);
   }
 
+  protected onAssignedEnter(event: Event): void {
+    (event.target as HTMLInputElement).blur();
+  }
+
   protected onAssignedBlur(groupId: string, catId: string, event: Event): void {
     const input = event.target as HTMLInputElement;
     const newAssigned = parseFloat(input.value) || 0;
