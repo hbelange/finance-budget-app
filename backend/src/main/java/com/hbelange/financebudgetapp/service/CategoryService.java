@@ -1,7 +1,9 @@
 package com.hbelange.financebudgetapp.service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -12,6 +14,7 @@ import com.hbelange.financebudgetapp.dto.BudgetCategoryDTO;
 import com.hbelange.financebudgetapp.dto.BudgetCategoryRequest;
 import com.hbelange.financebudgetapp.dto.CategoryGroupDTO;
 import com.hbelange.financebudgetapp.dto.CategoryGroupRequest;
+import com.hbelange.financebudgetapp.dto.SortItem;
 import com.hbelange.financebudgetapp.entity.BudgetCategory;
 import com.hbelange.financebudgetapp.entity.CategoryGroup;
 import com.hbelange.financebudgetapp.repository.BudgetCategoryRepository;
@@ -79,6 +82,22 @@ public class CategoryService {
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found"));
         category.setName(req.name());
         budgetCategoryRepository.save(category);
+    }
+
+    public void reorderGroups(List<SortItem> items) {
+        Map<UUID, Integer> orderMap = items.stream()
+            .collect(Collectors.toMap(SortItem::id, SortItem::sortOrder));
+        List<CategoryGroup> groups = categoryGroupRepository.findAllById(orderMap.keySet());
+        groups.forEach(g -> g.setSortOrder(orderMap.get(g.getId())));
+        categoryGroupRepository.saveAll(groups);
+    }
+
+    public void reorderCategories(List<SortItem> items) {
+        Map<UUID, Integer> orderMap = items.stream()
+            .collect(Collectors.toMap(SortItem::id, SortItem::sortOrder));
+        List<BudgetCategory> categories = budgetCategoryRepository.findAllById(orderMap.keySet());
+        categories.forEach(c -> c.setSortOrder(orderMap.get(c.getId())));
+        budgetCategoryRepository.saveAll(categories);
     }
 
     public void deleteCategory(UUID id) {

@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.hbelange.financebudgetapp.dto.BudgetCategoryRequest;
 import com.hbelange.financebudgetapp.dto.CategoryGroupDTO;
 import com.hbelange.financebudgetapp.dto.CategoryGroupRequest;
+import com.hbelange.financebudgetapp.dto.SortItem;
 import com.hbelange.financebudgetapp.service.CategoryService;
 
 import jakarta.validation.Valid;
@@ -48,6 +50,18 @@ public class CategoryController {
     @ResponseStatus(HttpStatus.CREATED)
     public CategoryGroupDTO addCategory(@PathVariable UUID groupId, @Valid @RequestBody BudgetCategoryRequest req) {
         return categoryService.addCategory(groupId, req);
+    }
+
+    @PatchMapping("/category-groups/reorder")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void reorderGroups(@RequestBody List<SortItem> items) {
+        categoryService.reorderGroups(items);
+    }
+
+    @PatchMapping("/category-groups/{groupId}/categories/reorder")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void reorderCategories(@PathVariable UUID groupId, @RequestBody List<SortItem> items) {
+        categoryService.reorderCategories(items);
     }
 
     @PutMapping("/categories/{id}")
