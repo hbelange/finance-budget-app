@@ -6,17 +6,21 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 24px;
 }
 
 .account-title {
-  font-size: 1.25rem;
+  font-size: 1.375rem;
   font-weight: 500;
   margin: 0;
+  color: var(--mat-sys-on-surface);
 }
 
 mat-table {
   width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--mat-sys-outline-variant);
 }
 
 .mat-column-date {

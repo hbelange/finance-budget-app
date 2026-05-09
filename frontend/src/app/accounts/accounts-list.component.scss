@@ -5,11 +5,14 @@
 .page-header {
   display: flex;
   justify-content: flex-end;
-  margin-bottom: 16px;
+  margin-bottom: 24px;
 }
 
 mat-table {
   width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--mat-sys-outline-variant);
 }
 
 .mat-column-actions {
