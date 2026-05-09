@@ -47,6 +47,13 @@ The key document is PLAN.md included here:
 
 @planning/PLAN.md
 
+## Git and Jira Workflow
+
+When developing a ticket, use /feature-dev plugin. 
+Once done feature-dev, ensure sufficient testing has been added, create a PR for the ticket, and place the ticket "In Review" in Jira.
+When creating the PR, leave a descriptive comment and test plan.
+After confirming the test plan successful, you can merge the ticket into main and place the ticket in "Done"
+
 ## Learning
 
 After you make an addition or a change for me to approve, before asking be to approve the change, please explain every piece of that change in detail, step by step.
