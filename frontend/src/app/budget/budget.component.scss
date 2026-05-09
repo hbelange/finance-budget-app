@@ -1,0 +1,118 @@
+:host {
+  display: block;
+}
+
+.rta-card {
+  display: block;
+  margin-bottom: 32px;
+
+  mat-card-content {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding: 16px 20px;
+    margin-bottom: 0;
+  }
+
+  &.overassigned {
+    background-color: var(--mat-sys-error);
+    color: var(--mat-sys-on-error);
+  }
+}
+
+.rta-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.7;
+}
+
+.rta-amount {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.budget-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.category-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  th {
+    padding: 8px 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--mat-sys-on-surface-variant);
+    text-align: left;
+    border-bottom: 1px solid var(--mat-sys-outline-variant);
+  }
+
+  td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--mat-sys-outline-variant);
+    font-size: 0.875rem;
+  }
+
+  tr:last-child td {
+    border-bottom: none;
+  }
+}
+
+.col-name {
+  width: 100%;
+}
+
+.col-number {
+  width: 140px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.assigned-input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-size: 0.875rem;
+  text-align: right;
+  color: inherit;
+  padding: 2px 0;
+  outline: none;
+  border-bottom: 1px solid transparent;
+  transition: border-bottom-color 0.15s;
+
+  &:hover {
+    border-bottom-color: var(--mat-sys-outline);
+  }
+
+  &:focus {
+    border-bottom-color: var(--mat-sys-primary);
+  }
+
+  &::-webkit-inner-spin-button,
+  &::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  appearance: textfield;
+}
+
+.spent {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.positive {
+  color: #2e7d32;
+}
+
+.negative {
+  color: var(--mat-sys-error);
+}
