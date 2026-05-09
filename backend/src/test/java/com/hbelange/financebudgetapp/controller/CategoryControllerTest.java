@@ -90,6 +90,26 @@ class CategoryControllerTest {
     }
 
     @Test
+    void reorderGroups_returns204() throws Exception {
+        mockMvc.perform(patch("/api/category-groups/reorder")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("[{\"id\":\"" + GROUP_ID + "\",\"sortOrder\":0}]"))
+            .andExpect(status().isNoContent());
+
+        verify(categoryService).reorderGroups(any());
+    }
+
+    @Test
+    void reorderCategories_returns204() throws Exception {
+        mockMvc.perform(patch("/api/category-groups/" + GROUP_ID + "/categories/reorder")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("[{\"id\":\"" + CAT_ID + "\",\"sortOrder\":0}]"))
+            .andExpect(status().isNoContent());
+
+        verify(categoryService).reorderCategories(any());
+    }
+
+    @Test
     void renameCategory_returns204() throws Exception {
         mockMvc.perform(put("/api/categories/" + CAT_ID)
                 .contentType(MediaType.APPLICATION_JSON)

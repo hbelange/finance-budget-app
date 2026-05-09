@@ -21,6 +21,7 @@ import org.springframework.web.server.ResponseStatusException;
 import com.hbelange.financebudgetapp.dto.BudgetCategoryRequest;
 import com.hbelange.financebudgetapp.dto.CategoryGroupDTO;
 import com.hbelange.financebudgetapp.dto.CategoryGroupRequest;
+import com.hbelange.financebudgetapp.dto.SortItem;
 import com.hbelange.financebudgetapp.entity.BudgetCategory;
 import com.hbelange.financebudgetapp.entity.CategoryGroup;
 import com.hbelange.financebudgetapp.repository.BudgetCategoryRepository;
@@ -169,6 +170,46 @@ class CategoryServiceTest {
 
         assertEquals("New Name", category.getName());
         verify(budgetCategoryRepository).save(category);
+    }
+
+    @Test
+    void reorderGroups_updatesAllSortOrders() {
+        UUID id1 = UUID.randomUUID();
+        UUID id2 = UUID.randomUUID();
+        CategoryGroup g1 = new CategoryGroup();
+        g1.setId(id1);
+        g1.setSortOrder(0);
+        CategoryGroup g2 = new CategoryGroup();
+        g2.setId(id2);
+        g2.setSortOrder(1);
+
+        when(categoryGroupRepository.findAllById(any())).thenReturn(List.of(g1, g2));
+
+        categoryService.reorderGroups(List.of(new SortItem(id1, 1), new SortItem(id2, 0)));
+
+        assertEquals(1, g1.getSortOrder());
+        assertEquals(0, g2.getSortOrder());
+        verify(categoryGroupRepository).saveAll(List.of(g1, g2));
+    }
+
+    @Test
+    void reorderCategories_updatesAllSortOrders() {
+        UUID id1 = UUID.randomUUID();
+        UUID id2 = UUID.randomUUID();
+        BudgetCategory c1 = new BudgetCategory();
+        c1.setId(id1);
+        c1.setSortOrder(0);
+        BudgetCategory c2 = new BudgetCategory();
+        c2.setId(id2);
+        c2.setSortOrder(1);
+
+        when(budgetCategoryRepository.findAllById(any())).thenReturn(List.of(c1, c2));
+
+        categoryService.reorderCategories(List.of(new SortItem(id1, 1), new SortItem(id2, 0)));
+
+        assertEquals(1, c1.getSortOrder());
+        assertEquals(0, c2.getSortOrder());
+        verify(budgetCategoryRepository).saveAll(List.of(c1, c2));
     }
 
     @Test
