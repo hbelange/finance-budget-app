@@ -1,0 +1,57 @@
+@if (dashboardData(); as data) {
+  <div class="tiles-grid">
+    <mat-card class="tile-card">
+      <mat-card-content>
+        <span class="tile-label">Net Worth</span>
+        <span
+          class="tile-value"
+          [class.positive]="data.dashboard.netWorth >= 0"
+          [class.negative]="data.dashboard.netWorth < 0"
+        >{{ data.dashboard.netWorth | currency }}</span>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="tile-card">
+      <mat-card-content>
+        <span class="tile-label">Income This Month</span>
+        <span class="tile-value positive">{{ data.dashboard.incomeThisMonth | currency }}</span>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="tile-card">
+      <mat-card-content>
+        <span class="tile-label">Spent This Month</span>
+        <span class="tile-value negative">{{ data.dashboard.spentThisMonth | currency }}</span>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="tile-card">
+      <mat-card-content>
+        <span class="tile-label">Top Category</span>
+        @if (data.spending[0]; as top) {
+          <span class="tile-value">{{ top.categoryName }}</span>
+          <span class="tile-sub">{{ top.spent | currency }}</span>
+        } @else {
+          <span class="tile-value">—</span>
+        }
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <section class="spending-section">
+    <h2 class="section-title">Spending by Category</h2>
+    @if (data.spending.length === 0) {
+      <p class="empty-state">No spending data for this month.</p>
+    } @else {
+      <div class="spending-list">
+        @for (item of data.spending; track item.categoryId) {
+          <div class="spending-row">
+            <span class="spending-name">{{ item.categoryName }}</span>
+            <mat-progress-bar mode="determinate" [value]="item.progress"></mat-progress-bar>
+            <span class="spending-amount">{{ item.spent | currency }}</span>
+          </div>
+        }
+      </div>
+    }
+  </section>
+}
