@@ -43,9 +43,12 @@ public class CategoryService {
     }
 
     public CategoryGroupDTO createGroup(CategoryGroupRequest req) {
+        int nextOrder = categoryGroupRepository.findTopByOrderBySortOrderDesc()
+            .map(g -> g.getSortOrder() + 1)
+            .orElse(0);
         CategoryGroup group = new CategoryGroup();
         group.setName(req.name());
-        group.setSortOrder(0);
+        group.setSortOrder(nextOrder);
         group = categoryGroupRepository.save(group);
         return new CategoryGroupDTO(group.getId(), group.getName(), List.of());
     }
@@ -54,10 +57,13 @@ public class CategoryService {
         CategoryGroup group = categoryGroupRepository.findById(groupId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category group not found"));
 
+        int nextOrder = budgetCategoryRepository.findTopByGroupIdOrderBySortOrderDesc(groupId)
+            .map(c -> c.getSortOrder() + 1)
+            .orElse(0);
         BudgetCategory category = new BudgetCategory();
         category.setGroupId(groupId);
         category.setName(req.name());
-        category.setSortOrder(0);
+        category.setSortOrder(nextOrder);
         budgetCategoryRepository.save(category);
 
         List<BudgetCategoryDTO> categories = budgetCategoryRepository

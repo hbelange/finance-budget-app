@@ -2,6 +2,7 @@ package com.hbelange.financebudgetapp.service;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.*;
 
 import java.util.List;
@@ -69,12 +70,35 @@ class CategoryServiceTest {
 
     @Test
     void createGroup_savesAndReturnsDTO() {
+        when(categoryGroupRepository.findTopByOrderBySortOrderDesc()).thenReturn(Optional.empty());
         when(categoryGroupRepository.save(any())).thenReturn(group);
 
         CategoryGroupDTO result = categoryService.createGroup(new CategoryGroupRequest("Housing"));
 
         assertEquals("Housing", result.name());
         verify(categoryGroupRepository).save(any());
+    }
+
+    @Test
+    void createGroup_assignsNextSortOrder_whenGroupsExist() {
+        CategoryGroup existing = new CategoryGroup();
+        existing.setSortOrder(2);
+        when(categoryGroupRepository.findTopByOrderBySortOrderDesc()).thenReturn(Optional.of(existing));
+        when(categoryGroupRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        categoryService.createGroup(new CategoryGroupRequest("New Group"));
+
+        verify(categoryGroupRepository).save(argThat(g -> g.getSortOrder() == 3));
+    }
+
+    @Test
+    void createGroup_assignsSortOrderZero_whenNoGroupsExist() {
+        when(categoryGroupRepository.findTopByOrderBySortOrderDesc()).thenReturn(Optional.empty());
+        when(categoryGroupRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        categoryService.createGroup(new CategoryGroupRequest("First Group"));
+
+        verify(categoryGroupRepository).save(argThat(g -> g.getSortOrder() == 0));
     }
 
     @Test
@@ -90,6 +114,7 @@ class CategoryServiceTest {
     @Test
     void addCategory_savesAndReturnsUpdatedGroup() {
         when(categoryGroupRepository.findById(groupId)).thenReturn(Optional.of(group));
+        when(budgetCategoryRepository.findTopByGroupIdOrderBySortOrderDesc(groupId)).thenReturn(Optional.empty());
         when(budgetCategoryRepository.save(any())).thenReturn(category);
         when(budgetCategoryRepository.findByGroupIdOrderBySortOrderAsc(groupId)).thenReturn(List.of(category));
 
@@ -97,6 +122,32 @@ class CategoryServiceTest {
 
         assertEquals(1, result.categories().size());
         assertEquals("Rent", result.categories().get(0).name());
+    }
+
+    @Test
+    void addCategory_assignsNextSortOrder_whenCategoriesExist() {
+        BudgetCategory existing = new BudgetCategory();
+        existing.setSortOrder(1);
+        when(categoryGroupRepository.findById(groupId)).thenReturn(Optional.of(group));
+        when(budgetCategoryRepository.findTopByGroupIdOrderBySortOrderDesc(groupId)).thenReturn(Optional.of(existing));
+        when(budgetCategoryRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(budgetCategoryRepository.findByGroupIdOrderBySortOrderAsc(groupId)).thenReturn(List.of());
+
+        categoryService.addCategory(groupId, new BudgetCategoryRequest("Utilities"));
+
+        verify(budgetCategoryRepository).save(argThat(c -> c.getSortOrder() == 2));
+    }
+
+    @Test
+    void addCategory_assignsSortOrderZero_whenNoCategoriesExist() {
+        when(categoryGroupRepository.findById(groupId)).thenReturn(Optional.of(group));
+        when(budgetCategoryRepository.findTopByGroupIdOrderBySortOrderDesc(groupId)).thenReturn(Optional.empty());
+        when(budgetCategoryRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(budgetCategoryRepository.findByGroupIdOrderBySortOrderAsc(groupId)).thenReturn(List.of());
+
+        categoryService.addCategory(groupId, new BudgetCategoryRequest("Rent"));
+
+        verify(budgetCategoryRepository).save(argThat(c -> c.getSortOrder() == 0));
     }
 
     @Test
