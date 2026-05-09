@@ -1,0 +1,54 @@
+<mat-card [class.overassigned]="readyToAssign() < 0" class="rta-card">
+  <mat-card-content>
+    <span class="rta-label">Ready to Assign</span>
+    <span class="rta-amount">{{ readyToAssign() | currency }}</span>
+  </mat-card-content>
+</mat-card>
+
+@if (budgetView(); as view) {
+  <div class="budget-groups">
+    @for (group of view.groups; track group.id) {
+      <mat-expansion-panel expanded>
+        <mat-expansion-panel-header>
+          <mat-panel-title>{{ group.name }}</mat-panel-title>
+          <mat-panel-description>
+            {{ groupTotal(group) | currency }} assigned
+          </mat-panel-description>
+        </mat-expansion-panel-header>
+
+        <table class="category-table">
+          <thead>
+            <tr>
+              <th class="col-name">Category</th>
+              <th class="col-number">Assigned</th>
+              <th class="col-number">Spent</th>
+              <th class="col-number">Available</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (cat of group.categories; track cat.id) {
+              <tr>
+                <td class="col-name">{{ cat.name }}</td>
+                <td class="col-number">
+                  <input
+                    class="assigned-input"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    [value]="cat.assigned"
+                    (blur)="onAssignedBlur(group.id, cat.id, $event)"
+                    (keydown.enter)="onAssignedEnter($event)"
+                  />
+                </td>
+                <td class="col-number spent">{{ abs(cat.spent) | currency }}</td>
+                <td class="col-number" [class.positive]="cat.available >= 0" [class.negative]="cat.available < 0">
+                  {{ cat.available | currency }}
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </mat-expansion-panel>
+    }
+  </div>
+}
