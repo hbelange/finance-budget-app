@@ -32,6 +32,8 @@ export class CategoryService {
 
   reorderCategories(groupId: string, items: SortItem[]): Observable<void> {
     return this.http.patch<void>(`/api/category-groups/${groupId}/categories/reorder`, items);
+  }
+
   createGroup(name: string): Observable<CategoryGroup> {
     return this.http.post<CategoryGroup>('/api/category-groups', { name });
   }
