@@ -96,6 +96,56 @@
   }
 }
 
+.col-drag {
+  width: 32px;
+  padding: 0 4px;
+}
+
+.drag-handle {
+  display: flex;
+  align-items: center;
+  cursor: grab;
+  color: var(--mat-sys-on-surface-variant);
+  opacity: 0.5;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.group-handle {
+  order: -1;
+  margin-right: 4px;
+}
+
+.group-drag-preview,
+.category-drag-preview {
+  padding: 8px 16px;
+  background: var(--mat-sys-surface-container-high);
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.cdk-drag-placeholder {
+  opacity: 0.3;
+}
+
+.cdk-drag-animating {
+  transition: transform 250ms ease;
+}
+
+.budget-groups.cdk-drop-list-dragging mat-expansion-panel:not(.cdk-drag-placeholder) {
+  transition: transform 250ms ease;
+}
+
 .col-name {
   width: 100%;
 }

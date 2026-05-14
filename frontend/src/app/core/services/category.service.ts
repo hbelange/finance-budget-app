@@ -13,6 +13,11 @@ export interface CategoryGroup {
   categories: BudgetCategory[];
 }
 
+export interface SortItem {
+  id: string;
+  sortOrder: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class CategoryService {
   private readonly http = inject(HttpClient);
@@ -21,6 +26,12 @@ export class CategoryService {
     return this.http.get<CategoryGroup[]>('/api/category-groups');
   }
 
+  reorderGroups(items: SortItem[]): Observable<void> {
+    return this.http.patch<void>('/api/category-groups/reorder', items);
+  }
+
+  reorderCategories(groupId: string, items: SortItem[]): Observable<void> {
+    return this.http.patch<void>(`/api/category-groups/${groupId}/categories/reorder`, items);
   createGroup(name: string): Observable<CategoryGroup> {
     return this.http.post<CategoryGroup>('/api/category-groups', { name });
   }
