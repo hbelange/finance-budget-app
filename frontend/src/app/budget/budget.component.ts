@@ -10,7 +10,6 @@ import {
   MatExpansionPanelTitle, MatExpansionPanelDescription,
 } from '@angular/material/expansion';
 import { MatIconButton, MatButton } from '@angular/material/button';
-import { MatIcon } from '@angular/material/icon';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { BudgetStateService } from '../core/services/budget-state.service';
@@ -109,6 +108,9 @@ export default class BudgetComponent {
         this.loadBudget(this.month());
         this.snackBar.open('Failed to save category order.', 'OK', { duration: 5000 });
       },
+    });
+  }
+  
   protected openAddGroup(): void {
     this.dialog.open(NameDialogComponent, { data: { title: 'New Category Group' } })
       .afterClosed()

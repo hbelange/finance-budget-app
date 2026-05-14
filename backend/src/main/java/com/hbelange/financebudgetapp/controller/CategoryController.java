@@ -62,6 +62,8 @@ public class CategoryController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void reorderCategories(@PathVariable UUID groupId, @RequestBody List<SortItem> items) {
         categoryService.reorderCategories(items);
+    }
+    
     @PutMapping("/category-groups/{id}")
     public CategoryGroupDTO renameGroup(@PathVariable UUID id, @Valid @RequestBody CategoryGroupRequest req) {
         return categoryService.renameGroup(id, req);
