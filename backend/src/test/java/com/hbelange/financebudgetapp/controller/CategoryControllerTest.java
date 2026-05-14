@@ -107,6 +107,9 @@ class CategoryControllerTest {
             .andExpect(status().isNoContent());
 
         verify(categoryService).reorderCategories(any());
+    }
+    
+    @Test
     void renameGroup_returns200WithUpdatedGroup() throws Exception {
         CategoryGroupDTO dto = new CategoryGroupDTO(GROUP_ID, "New Name", List.of());
         when(categoryService.renameGroup(eq(GROUP_ID), any())).thenReturn(dto);
