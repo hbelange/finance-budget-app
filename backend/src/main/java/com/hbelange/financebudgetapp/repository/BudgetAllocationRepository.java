@@ -30,6 +30,9 @@ public interface BudgetAllocationRepository extends JpaRepository<BudgetAllocati
     void upsert(@Param("categoryId") UUID categoryId, @Param("month") LocalDate month, @Param("assigned") BigDecimal assigned);
 
     @Modifying
+    void deleteByCategoryId(UUID categoryId);
+
+    @Modifying
     @Query("DELETE FROM BudgetAllocation ba WHERE ba.categoryId IN (SELECT bc.id FROM BudgetCategory bc WHERE bc.groupId = :groupId)")
     void deleteByGroupId(@Param("groupId") UUID groupId);
 }

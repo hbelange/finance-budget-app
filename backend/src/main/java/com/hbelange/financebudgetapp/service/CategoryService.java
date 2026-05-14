@@ -105,6 +105,7 @@ public class CategoryService {
         categoryGroupRepository.deleteById(id);
     }
 
+    @Transactional
     public void deleteCategory(UUID id) {
         if (!budgetCategoryRepository.existsById(id)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found");
@@ -112,6 +113,7 @@ public class CategoryService {
         if (budgetCategoryRepository.existsTransactionsByCategoryId(id)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Category has existing transactions");
         }
+        budgetAllocationRepository.deleteByCategoryId(id);
         budgetCategoryRepository.deleteById(id);
     }
 }
