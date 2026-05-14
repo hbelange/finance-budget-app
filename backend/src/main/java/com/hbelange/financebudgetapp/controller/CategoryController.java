@@ -50,6 +50,17 @@ public class CategoryController {
         return categoryService.addCategory(groupId, req);
     }
 
+    @PutMapping("/category-groups/{id}")
+    public CategoryGroupDTO renameGroup(@PathVariable UUID id, @Valid @RequestBody CategoryGroupRequest req) {
+        return categoryService.renameGroup(id, req);
+    }
+
+    @DeleteMapping("/category-groups/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteGroup(@PathVariable UUID id) {
+        categoryService.deleteGroup(id);
+    }
+
     @PutMapping("/categories/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void renameCategory(@PathVariable UUID id, @Valid @RequestBody BudgetCategoryRequest req) {

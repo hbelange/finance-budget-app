@@ -90,6 +90,46 @@ class CategoryControllerTest {
     }
 
     @Test
+    void renameGroup_returns200WithUpdatedGroup() throws Exception {
+        CategoryGroupDTO dto = new CategoryGroupDTO(GROUP_ID, "New Name", List.of());
+        when(categoryService.renameGroup(eq(GROUP_ID), any())).thenReturn(dto);
+
+        mockMvc.perform(put("/api/category-groups/" + GROUP_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"New Name\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.name").value("New Name"));
+    }
+
+    @Test
+    void renameGroup_returns404_whenGroupMissing() throws Exception {
+        when(categoryService.renameGroup(eq(GROUP_ID), any()))
+            .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        mockMvc.perform(put("/api/category-groups/" + GROUP_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"New Name\"}"))
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void deleteGroup_returns204() throws Exception {
+        mockMvc.perform(delete("/api/category-groups/" + GROUP_ID))
+            .andExpect(status().isNoContent());
+
+        verify(categoryService).deleteGroup(GROUP_ID);
+    }
+
+    @Test
+    void deleteGroup_returns409_whenTransactionsExist() throws Exception {
+        doThrow(new ResponseStatusException(HttpStatus.CONFLICT, "Group contains categories with existing transactions"))
+            .when(categoryService).deleteGroup(GROUP_ID);
+
+        mockMvc.perform(delete("/api/category-groups/" + GROUP_ID))
+            .andExpect(status().isConflict());
+    }
+
+    @Test
     void renameCategory_returns204() throws Exception {
         mockMvc.perform(put("/api/categories/" + CAT_ID)
                 .contentType(MediaType.APPLICATION_JSON)

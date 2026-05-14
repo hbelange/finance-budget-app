@@ -1,14 +1,21 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { CurrencyPipe } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatCard, MatCardContent } from '@angular/material/card';
 import {
   MatExpansionPanel, MatExpansionPanelHeader,
   MatExpansionPanelTitle, MatExpansionPanelDescription,
 } from '@angular/material/expansion';
+import { MatIconButton, MatButton } from '@angular/material/button';
+import { MatIcon } from '@angular/material/icon';
+import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { BudgetStateService } from '../core/services/budget-state.service';
-import { AllocationRequest, BudgetGroup, BudgetService, BudgetView } from '../core/services/budget.service';
+import { AllocationRequest, BudgetCategory, BudgetGroup, BudgetService, BudgetView } from '../core/services/budget.service';
+import { CategoryService } from '../core/services/category.service';
+import { ConfirmDialogComponent } from '../accounts/confirm-dialog.component';
+import { NameDialogComponent } from '../shared/name-dialog.component';
 
 @Component({
   selector: 'app-budget',
@@ -17,6 +24,8 @@ import { AllocationRequest, BudgetGroup, BudgetService, BudgetView } from '../co
     MatCard, MatCardContent,
     MatExpansionPanel, MatExpansionPanelHeader,
     MatExpansionPanelTitle, MatExpansionPanelDescription,
+    MatIconButton, MatButton,
+    MatIcon,
   ],
   templateUrl: './budget.component.html',
   styleUrl: './budget.component.scss',
@@ -24,7 +33,9 @@ import { AllocationRequest, BudgetGroup, BudgetService, BudgetView } from '../co
 })
 export default class BudgetComponent {
   private readonly budgetService = inject(BudgetService);
+  private readonly categoryService = inject(CategoryService);
   private readonly budgetState = inject(BudgetStateService);
+  private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
 
   private readonly month = toSignal(this.budgetState.month$, { requireSync: true });
@@ -60,10 +71,91 @@ export default class BudgetComponent {
     this.budgetService.upsertAllocation(req).subscribe({
       next: () => this.loadBudget(this.month()),
       error: () => {
-        // Create a new signal reference to force re-render and revert the input
         this.budgetView.update(v => v ? { ...v } : v);
         this.snackBar.open('Failed to save allocation.', 'OK', { duration: 5000 });
       },
+    });
+  }
+
+  protected openAddGroup(): void {
+    this.dialog.open(NameDialogComponent, { data: { title: 'New Category Group' } })
+      .afterClosed()
+      .subscribe((name: string | undefined) => {
+        if (!name) return;
+        this.categoryService.createGroup(name).subscribe({
+          next: () => this.loadBudget(this.month()),
+          error: () => this.snackBar.open('Failed to create group.', 'OK', { duration: 5000 }),
+        });
+      });
+  }
+
+  protected openRenameGroup(group: BudgetGroup): void {
+    this.dialog.open(NameDialogComponent, { data: { title: 'Rename Group', initialValue: group.name } })
+      .afterClosed()
+      .subscribe((name: string | undefined) => {
+        if (!name) return;
+        this.categoryService.renameGroup(group.id, name).subscribe({
+          next: () => this.loadBudget(this.month()),
+          error: () => this.snackBar.open('Failed to rename group.', 'OK', { duration: 5000 }),
+        });
+      });
+  }
+
+  protected confirmDeleteGroup(group: BudgetGroup): void {
+    this.dialog.open(ConfirmDialogComponent, {
+      data: { message: `Delete "${group.name}" and all its categories? This cannot be undone.` },
+    }).afterClosed().subscribe((confirmed: boolean | undefined) => {
+      if (!confirmed) return;
+      this.categoryService.deleteGroup(group.id).subscribe({
+        next: () => this.loadBudget(this.month()),
+        error: (err: HttpErrorResponse) => {
+          const msg = err.status === 409
+            ? 'Remove all transactions from this group\'s categories before deleting.'
+            : 'Failed to delete group.';
+          this.snackBar.open(msg, 'OK', { duration: 5000 });
+        },
+      });
+    });
+  }
+
+  protected openAddCategory(group: BudgetGroup): void {
+    this.dialog.open(NameDialogComponent, { data: { title: `Add Category to "${group.name}"` } })
+      .afterClosed()
+      .subscribe((name: string | undefined) => {
+        if (!name) return;
+        this.categoryService.addCategory(group.id, name).subscribe({
+          next: () => this.loadBudget(this.month()),
+          error: () => this.snackBar.open('Failed to create category.', 'OK', { duration: 5000 }),
+        });
+      });
+  }
+
+  protected openRenameCategory(cat: BudgetCategory): void {
+    this.dialog.open(NameDialogComponent, { data: { title: 'Rename Category', initialValue: cat.name } })
+      .afterClosed()
+      .subscribe((name: string | undefined) => {
+        if (!name) return;
+        this.categoryService.renameCategory(cat.id, name).subscribe({
+          next: () => this.loadBudget(this.month()),
+          error: () => this.snackBar.open('Failed to rename category.', 'OK', { duration: 5000 }),
+        });
+      });
+  }
+
+  protected confirmDeleteCategory(cat: BudgetCategory): void {
+    this.dialog.open(ConfirmDialogComponent, {
+      data: { message: `Delete "${cat.name}"? This cannot be undone.` },
+    }).afterClosed().subscribe((confirmed: boolean | undefined) => {
+      if (!confirmed) return;
+      this.categoryService.deleteCategory(cat.id).subscribe({
+        next: () => this.loadBudget(this.month()),
+        error: (err: HttpErrorResponse) => {
+          const msg = err.status === 409
+            ? 'Remove all transactions from this category before deleting.'
+            : 'Failed to delete category.';
+          this.snackBar.open(msg, 'OK', { duration: 5000 });
+        },
+      });
     });
   }
 
