@@ -6,13 +6,34 @@
 </mat-card>
 
 @if (budgetView(); as view) {
+  <div class="budget-toolbar">
+    <button mat-button (click)="openAddGroup()">
+      <mat-icon>add</mat-icon>
+      Add Group
+    </button>
+  </div>
+
   <div class="budget-groups">
     @for (group of view.groups; track group.id) {
       <mat-expansion-panel expanded>
         <mat-expansion-panel-header>
           <mat-panel-title>{{ group.name }}</mat-panel-title>
-          <mat-panel-description>
-            {{ groupTotal(group) | currency }} assigned
+          <mat-panel-description class="group-header-description">
+            <span>{{ groupTotal(group) | currency }} assigned</span>
+            <span class="group-actions" role="group" [attr.aria-label]="group.name + ' actions'">
+              <button mat-icon-button aria-label="Add category"
+                (click)="$event.stopPropagation(); openAddCategory(group)">
+                <mat-icon>add</mat-icon>
+              </button>
+              <button mat-icon-button aria-label="Rename group"
+                (click)="$event.stopPropagation(); openRenameGroup(group)">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button mat-icon-button aria-label="Delete group"
+                (click)="$event.stopPropagation(); confirmDeleteGroup(group)">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </span>
           </mat-panel-description>
         </mat-expansion-panel-header>
 
@@ -23,6 +44,7 @@
               <th class="col-number">Assigned</th>
               <th class="col-number">Spent</th>
               <th class="col-number">Available</th>
+              <th class="col-actions"></th>
             </tr>
           </thead>
           <tbody>
@@ -43,6 +65,16 @@
                 <td class="col-number spent">{{ abs(cat.spent) | currency }}</td>
                 <td class="col-number" [class.positive]="cat.available >= 0" [class.negative]="cat.available < 0">
                   {{ cat.available | currency }}
+                </td>
+                <td class="col-actions">
+                  <button mat-icon-button [attr.aria-label]="'Rename ' + cat.name"
+                    (click)="openRenameCategory(cat)">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button mat-icon-button [attr.aria-label]="'Delete ' + cat.name"
+                    (click)="confirmDeleteCategory(cat)">
+                    <mat-icon>delete</mat-icon>
+                  </button>
                 </td>
               </tr>
             }
