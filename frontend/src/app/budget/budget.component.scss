@@ -33,10 +33,41 @@
   font-weight: 600;
 }
 
+.budget-toolbar {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 16px;
+}
+
 .budget-groups {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.group-header-description {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.group-actions {
+  display: flex;
+  align-items: center;
+  margin-left: 8px;
+
+  button {
+    width: 32px;
+    height: 32px;
+    line-height: 32px;
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+  }
 }
 
 .category-table {
@@ -73,6 +104,24 @@
   width: 140px;
   text-align: right;
   white-space: nowrap;
+}
+
+.col-actions {
+  width: 80px;
+  text-align: right;
+  white-space: nowrap;
+
+  button {
+    width: 32px;
+    height: 32px;
+    line-height: 32px;
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+  }
 }
 
 .assigned-input {
