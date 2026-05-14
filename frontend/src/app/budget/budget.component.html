@@ -13,10 +13,19 @@
     </button>
   </div>
 
-  <div class="budget-groups">
+  <div
+    class="budget-groups"
+    cdkDropList
+    [cdkDropListData]="view.groups"
+    cdkDropListLockAxis="y"
+    (cdkDropListDropped)="onGroupDrop($event)"
+  >
     @for (group of view.groups; track group.id) {
-      <mat-expansion-panel expanded>
+      <mat-expansion-panel expanded cdkDrag [cdkDragData]="group">
         <mat-expansion-panel-header>
+          <span cdkDragHandle class="drag-handle group-handle" aria-label="Drag to reorder group">
+            <mat-icon>drag_indicator</mat-icon>
+          </span>
           <mat-panel-title>{{ group.name }}</mat-panel-title>
           <mat-panel-description class="group-header-description">
             <span>{{ groupTotal(group) | currency }} assigned</span>
@@ -37,9 +46,14 @@
           </mat-panel-description>
         </mat-expansion-panel-header>
 
+        <ng-template cdkDragPreview>
+          <div class="group-drag-preview">{{ group.name }}</div>
+        </ng-template>
+
         <table class="category-table">
           <thead>
             <tr>
+              <th class="col-drag"></th>
               <th class="col-name">Category</th>
               <th class="col-number">Assigned</th>
               <th class="col-number">Spent</th>
@@ -47,9 +61,19 @@
               <th class="col-actions"></th>
             </tr>
           </thead>
-          <tbody>
+          <tbody
+            cdkDropList
+            [cdkDropListData]="group.categories"
+            cdkDropListLockAxis="y"
+            (cdkDropListDropped)="onCategoryDrop(group, $event)"
+          >
             @for (cat of group.categories; track cat.id) {
-              <tr>
+              <tr cdkDrag [cdkDragData]="cat">
+                <td class="col-drag">
+                  <span cdkDragHandle class="drag-handle" aria-label="Drag to reorder category">
+                    <mat-icon>drag_indicator</mat-icon>
+                  </span>
+                </td>
                 <td class="col-name">{{ cat.name }}</td>
                 <td class="col-number">
                   <input
@@ -66,6 +90,9 @@
                 <td class="col-number" [class.positive]="cat.available >= 0" [class.negative]="cat.available < 0">
                   {{ cat.available | currency }}
                 </td>
+                <ng-template cdkDragPreview>
+                  <div class="category-drag-preview">{{ cat.name }}</div>
+                </ng-template>
                 <td class="col-actions">
                   <button mat-icon-button [attr.aria-label]="'Rename ' + cat.name"
                     (click)="openRenameCategory(cat)">
