@@ -24,6 +24,7 @@ import com.hbelange.financebudgetapp.dto.CategoryGroupRequest;
 import com.hbelange.financebudgetapp.dto.SortItem;
 import com.hbelange.financebudgetapp.entity.BudgetCategory;
 import com.hbelange.financebudgetapp.entity.CategoryGroup;
+import com.hbelange.financebudgetapp.repository.BudgetAllocationRepository;
 import com.hbelange.financebudgetapp.repository.BudgetCategoryRepository;
 import com.hbelange.financebudgetapp.repository.CategoryGroupRepository;
 
@@ -32,6 +33,7 @@ class CategoryServiceTest {
 
     @Mock private CategoryGroupRepository categoryGroupRepository;
     @Mock private BudgetCategoryRepository budgetCategoryRepository;
+    @Mock private BudgetAllocationRepository budgetAllocationRepository;
 
     @InjectMocks
     private CategoryService categoryService;
@@ -232,6 +234,63 @@ class CategoryServiceTest {
 
         assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
         verify(budgetCategoryRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void renameGroup_throwsNotFound_whenGroupMissing() {
+        when(categoryGroupRepository.findById(groupId)).thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+            () -> categoryService.renameGroup(groupId, new CategoryGroupRequest("New Name")));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+    }
+
+    @Test
+    void renameGroup_updatesNameAndReturnsDTO() {
+        when(categoryGroupRepository.findById(groupId)).thenReturn(Optional.of(group));
+        when(categoryGroupRepository.save(any())).thenReturn(group);
+        when(budgetCategoryRepository.findByGroupIdOrderBySortOrderAsc(groupId)).thenReturn(List.of(category));
+
+        CategoryGroupDTO result = categoryService.renameGroup(groupId, new CategoryGroupRequest("New Name"));
+
+        assertEquals("New Name", group.getName());
+        assertEquals(1, result.categories().size());
+        verify(categoryGroupRepository).save(group);
+    }
+
+    @Test
+    void deleteGroup_throwsNotFound_whenGroupMissing() {
+        when(categoryGroupRepository.existsById(groupId)).thenReturn(false);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+            () -> categoryService.deleteGroup(groupId));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+    }
+
+    @Test
+    void deleteGroup_throwsConflict_whenTransactionsExist() {
+        when(categoryGroupRepository.existsById(groupId)).thenReturn(true);
+        when(budgetCategoryRepository.existsTransactionsByGroupId(groupId)).thenReturn(true);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+            () -> categoryService.deleteGroup(groupId));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        verify(categoryGroupRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void deleteGroup_deletesAllocationsAndCategoriesAndGroup() {
+        when(categoryGroupRepository.existsById(groupId)).thenReturn(true);
+        when(budgetCategoryRepository.existsTransactionsByGroupId(groupId)).thenReturn(false);
+
+        categoryService.deleteGroup(groupId);
+
+        verify(budgetAllocationRepository).deleteByGroupId(groupId);
+        verify(budgetCategoryRepository).deleteByGroupId(groupId);
+        verify(categoryGroupRepository).deleteById(groupId);
     }
 
     @Test

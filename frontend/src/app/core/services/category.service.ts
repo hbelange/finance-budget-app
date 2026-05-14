@@ -32,5 +32,27 @@ export class CategoryService {
 
   reorderCategories(groupId: string, items: SortItem[]): Observable<void> {
     return this.http.patch<void>(`/api/category-groups/${groupId}/categories/reorder`, items);
+  createGroup(name: string): Observable<CategoryGroup> {
+    return this.http.post<CategoryGroup>('/api/category-groups', { name });
+  }
+
+  renameGroup(id: string, name: string): Observable<CategoryGroup> {
+    return this.http.put<CategoryGroup>(`/api/category-groups/${id}`, { name });
+  }
+
+  deleteGroup(id: string): Observable<void> {
+    return this.http.delete<void>(`/api/category-groups/${id}`);
+  }
+
+  addCategory(groupId: string, name: string): Observable<CategoryGroup> {
+    return this.http.post<CategoryGroup>(`/api/category-groups/${groupId}/categories`, { name });
+  }
+
+  renameCategory(id: string, name: string): Observable<void> {
+    return this.http.put<void>(`/api/categories/${id}`, { name });
+  }
+
+  deleteCategory(id: string): Observable<void> {
+    return this.http.delete<void>(`/api/categories/${id}`);
   }
 }
