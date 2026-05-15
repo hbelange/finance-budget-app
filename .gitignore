@@ -27,7 +27,6 @@ logs/
 .env
 .env.local
 .env.*.local
-frontend/src/environments/environment.ts
 
 # Node (for future frontend)
 node_modules/
