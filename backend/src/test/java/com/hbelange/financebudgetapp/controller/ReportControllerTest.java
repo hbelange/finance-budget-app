@@ -20,7 +20,10 @@ import com.hbelange.financebudgetapp.dto.DashboardDto;
 import com.hbelange.financebudgetapp.dto.SpendingByCategoryDto;
 import com.hbelange.financebudgetapp.service.ReportService;
 
-@WebMvcTest(ReportController.class)
+import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration;
+
+@WebMvcTest(value = ReportController.class, excludeAutoConfiguration = {SecurityAutoConfiguration.class, SecurityFilterAutoConfiguration.class})
 class ReportControllerTest {
 
     @Autowired
