@@ -1,0 +1,23 @@
+databases:
+  - name: finance-budget-db
+    databaseName: budget
+    user: budget
+    plan: free
+
+services:
+  - type: web
+    name: finance-budget-api
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: DB_URL
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: AUTH0_ISSUER_URI
+        value: https://dev-pbo6b7xkaou1ofah.us.auth0.com/
+      - key: AUTH0_AUDIENCE
+        value: https://finance-budget-api
