@@ -1,9 +1,3 @@
-databases:
-  - name: finance-budget-db
-    databaseName: budget
-    user: budget
-    plan: free
-
 services:
   - type: web
     name: finance-budget-api
