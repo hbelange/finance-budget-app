@@ -21,7 +21,10 @@ import org.springframework.web.server.ResponseStatusException;
 import com.hbelange.financebudgetapp.dto.BudgetViewDTO;
 import com.hbelange.financebudgetapp.service.BudgetService;
 
-@WebMvcTest(BudgetController.class)
+import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration;
+
+@WebMvcTest(value = BudgetController.class, excludeAutoConfiguration = {SecurityAutoConfiguration.class, SecurityFilterAutoConfiguration.class})
 class BudgetControllerTest {
 
     @Autowired

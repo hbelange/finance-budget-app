@@ -24,7 +24,10 @@ import org.springframework.web.server.ResponseStatusException;
 import com.hbelange.financebudgetapp.dto.AccountDTO;
 import com.hbelange.financebudgetapp.service.AccountService;
 
-@WebMvcTest(AccountController.class)
+import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration;
+
+@WebMvcTest(value = AccountController.class, excludeAutoConfiguration = {SecurityAutoConfiguration.class, SecurityFilterAutoConfiguration.class})
 class AccountControllerTest {
 
     @Autowired
