@@ -2,13 +2,15 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Router, NavigationEnd, RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
-import { filter, map, startWith, catchError, of } from 'rxjs';
+import { filter, map, startWith, catchError, of, switchMap, take } from 'rxjs';
 import { MatSidenavContainer, MatSidenav, MatSidenavContent } from '@angular/material/sidenav';
 import { MatToolbar } from '@angular/material/toolbar';
 import { MatNavList, MatListItem } from '@angular/material/list';
 import { MatFormField } from '@angular/material/form-field';
 import { MatSelect } from '@angular/material/select';
 import { MatOption } from '@angular/material/core';
+import { MatButton } from '@angular/material/button';
+import { AuthService } from '@auth0/auth0-angular';
 import { BudgetStateService } from './core/services/budget-state.service';
 
 interface DateBounds { first: string | null; last: string | null; }
@@ -45,7 +47,8 @@ function buildMonthList(first: string | null, last: string | null): string[] {
     MatSidenavContainer, MatSidenav, MatSidenavContent,
     MatToolbar,
     MatNavList, MatListItem,
-    MatFormField, MatSelect, MatOption
+    MatFormField, MatSelect, MatOption,
+    MatButton,
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss',
@@ -55,6 +58,7 @@ export class App {
   private readonly router = inject(Router);
   private readonly http = inject(HttpClient);
   private readonly budgetState = inject(BudgetStateService);
+  private readonly auth = inject(AuthService);
 
   private readonly currentUrl = toSignal(
     this.router.events.pipe(
@@ -66,11 +70,20 @@ export class App {
   );
 
   private readonly dateBounds = toSignal(
-    this.http.get<DateBounds>('/api/transactions/date-bounds').pipe(
-      catchError(() => of({ first: null, last: null }))
+    this.auth.isAuthenticated$.pipe(
+      filter(Boolean),
+      take(1),
+      switchMap(() =>
+        this.http.get<DateBounds>('/api/transactions/date-bounds').pipe(
+          catchError(() => of({ first: null, last: null }))
+        )
+      )
     ),
     { initialValue: null }
   );
+
+  protected readonly isLoading = toSignal(this.auth.isLoading$, { initialValue: true });
+  protected readonly isAuthenticated = toSignal(this.auth.isAuthenticated$, { initialValue: false });
 
   protected readonly selectedMonth = toSignal(this.budgetState.month$, { requireSync: true });
 
@@ -103,5 +116,13 @@ export class App {
   protected formatMonth(ym: string): string {
     const [y, m] = ym.split('-').map(Number);
     return new Date(y, m - 1, 1).toLocaleString('default', { month: 'long', year: 'numeric' });
+  }
+
+  protected login(): void {
+    this.auth.loginWithRedirect();
+  }
+
+  protected logout(): void {
+    this.auth.logout({ logoutParams: { returnTo: window.location.origin } });
   }
 }
