@@ -22,7 +22,10 @@ import com.hbelange.financebudgetapp.dto.BudgetCategoryDTO;
 import com.hbelange.financebudgetapp.dto.CategoryGroupDTO;
 import com.hbelange.financebudgetapp.service.CategoryService;
 
-@WebMvcTest(CategoryController.class)
+import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration;
+
+@WebMvcTest(value = CategoryController.class, excludeAutoConfiguration = {SecurityAutoConfiguration.class, SecurityFilterAutoConfiguration.class})
 class CategoryControllerTest {
 
     @Autowired

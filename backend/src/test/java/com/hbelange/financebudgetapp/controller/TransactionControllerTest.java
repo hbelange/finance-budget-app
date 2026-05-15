@@ -14,6 +14,9 @@ import org.springframework.web.server.ResponseStatusException;
 import com.hbelange.financebudgetapp.dto.TransactionDTO;
 import com.hbelange.financebudgetapp.service.TransactionService;
 
+import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -31,7 +34,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(TransactionController.class)
+@WebMvcTest(value = TransactionController.class, excludeAutoConfiguration = {SecurityAutoConfiguration.class, SecurityFilterAutoConfiguration.class})
 class TransactionControllerTest {
 
     @Autowired
