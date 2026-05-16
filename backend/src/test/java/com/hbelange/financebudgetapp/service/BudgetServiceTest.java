@@ -64,7 +64,7 @@ class BudgetServiceTest {
 
     @Test
     void getBudget_returnsCorrectReadyToAssign() {
-        when(transactionRepository.sumIncomeUpToDate(any())).thenReturn(new BigDecimal("1000.00"));
+        when(transactionRepository.sumNetUpToDate(any())).thenReturn(new BigDecimal("1000.00"));
         when(budgetAllocationRepository.sumAssignedUpToMonth(any())).thenReturn(new BigDecimal("600.00"));
         when(budgetAllocationRepository.findByMonth(any())).thenReturn(List.of());
         when(transactionRepository.findSpentByCategoryForMonth(any(), any())).thenReturn(List.of());
@@ -77,7 +77,7 @@ class BudgetServiceTest {
 
     @Test
     void getBudget_readyToAssignIsNegative_whenOverAssigned() {
-        when(transactionRepository.sumIncomeUpToDate(any())).thenReturn(new BigDecimal("500.00"));
+        when(transactionRepository.sumNetUpToDate(any())).thenReturn(new BigDecimal("500.00"));
         when(budgetAllocationRepository.sumAssignedUpToMonth(any())).thenReturn(new BigDecimal("800.00"));
         when(budgetAllocationRepository.findByMonth(any())).thenReturn(List.of());
         when(transactionRepository.findSpentByCategoryForMonth(any(), any())).thenReturn(List.of());
@@ -95,7 +95,7 @@ class BudgetServiceTest {
         allocation.setMonth(LocalDate.of(2026, 5, 1));
         allocation.setAssigned(new BigDecimal("500.00"));
 
-        when(transactionRepository.sumIncomeUpToDate(any())).thenReturn(BigDecimal.ZERO);
+        when(transactionRepository.sumNetUpToDate(any())).thenReturn(BigDecimal.ZERO);
         when(budgetAllocationRepository.sumAssignedUpToMonth(any())).thenReturn(BigDecimal.ZERO);
         when(budgetAllocationRepository.findByMonth(any())).thenReturn(List.of(allocation));
         when(transactionRepository.findSpentByCategoryForMonth(any(), any()))
@@ -113,7 +113,7 @@ class BudgetServiceTest {
 
     @Test
     void getBudget_returnsZeroAvailable_whenNoAllocationOrSpending() {
-        when(transactionRepository.sumIncomeUpToDate(any())).thenReturn(BigDecimal.ZERO);
+        when(transactionRepository.sumNetUpToDate(any())).thenReturn(BigDecimal.ZERO);
         when(budgetAllocationRepository.sumAssignedUpToMonth(any())).thenReturn(BigDecimal.ZERO);
         when(budgetAllocationRepository.findByMonth(any())).thenReturn(List.of());
         when(transactionRepository.findSpentByCategoryForMonth(any(), any())).thenReturn(List.of());
