@@ -3,28 +3,34 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 
-# --- PostgreSQL ---
-if [ "$(docker inspect -f '{{.State.Running}}' budget-postgres 2>/dev/null)" = "true" ]; then
-    echo "budget-postgres is already running."
-else
-    echo "Starting budget-postgres..."
-    if docker inspect budget-postgres &>/dev/null; then
-        docker start budget-postgres
-    else
-        docker run -d \
-            --name budget-postgres \
-            -e POSTGRES_DB=budget \
-            -e POSTGRES_USER=budget \
-            -e POSTGRES_PASSWORD=budget \
-            -p 5432:5432 \
-            postgres:16
-    fi
+set -a; [ -f "$ROOT/.env" ] && source "$ROOT/.env"; set +a
 
-    echo "Waiting for PostgreSQL to be ready..."
-    until docker exec budget-postgres pg_isready -U budget -d budget &>/dev/null; do
-        sleep 1
-    done
-    echo "PostgreSQL is ready."
+# --- PostgreSQL (skipped when DB_URL points to an external database) ---
+if [ -n "${DB_URL:-}" ]; then
+    echo "DB_URL is set — using external database, skipping Docker."
+else
+    if [ "$(docker inspect -f '{{.State.Running}}' budget-postgres 2>/dev/null)" = "true" ]; then
+        echo "budget-postgres is already running."
+    else
+        echo "Starting budget-postgres..."
+        if docker inspect budget-postgres &>/dev/null; then
+            docker start budget-postgres
+        else
+            docker run -d \
+                --name budget-postgres \
+                -e POSTGRES_DB=budget \
+                -e POSTGRES_USER=budget \
+                -e POSTGRES_PASSWORD=budget \
+                -p 5432:5432 \
+                postgres:16
+        fi
+
+        echo "Waiting for PostgreSQL to be ready..."
+        until docker exec budget-postgres pg_isready -U budget -d budget &>/dev/null; do
+            sleep 1
+        done
+        echo "PostgreSQL is ready."
+    fi
 fi
 
 # --- Spring Boot ---

@@ -35,8 +35,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
         return findByAccountIdBetween(accountId, month.atDay(1), month.atEndOfMonth(), pageable);
     }
 
-    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.amount > 0 AND t.date <= :lastDayOfMonth")
-    BigDecimal sumIncomeUpToDate(@Param("lastDayOfMonth") LocalDate lastDayOfMonth);
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.date <= :lastDayOfMonth")
+    BigDecimal sumNetUpToDate(@Param("lastDayOfMonth") LocalDate lastDayOfMonth);
 
     @Query("SELECT NEW com.hbelange.financebudgetapp.dto.CategorySpent(t.categoryId, COALESCE(SUM(t.amount), 0)) FROM Transaction t WHERE t.categoryId IS NOT NULL AND t.date BETWEEN :start AND :end GROUP BY t.categoryId")
     List<CategorySpent> findSpentByCategoryForMonth(@Param("start") LocalDate start, @Param("end") LocalDate end);
