@@ -2,6 +2,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
+
+set -a; [ -f "$ROOT/.env" ] && source "$ROOT/.env"; set +a
 PID_FILE="$ROOT/.spring-boot.pid"
 FRONTEND_PID_FILE="$ROOT/.frontend.pid"
 
@@ -37,8 +39,10 @@ else
     echo "No Spring Boot PID file found. Nothing to stop."
 fi
 
-# --- PostgreSQL ---
-if [ "$(docker inspect -f '{{.State.Running}}' budget-postgres 2>/dev/null)" = "true" ]; then
+# --- PostgreSQL (skipped when DB_URL points to an external database) ---
+if [ -n "${DB_URL:-}" ]; then
+    echo "DB_URL is set — using external database, skipping Docker stop."
+elif [ "$(docker inspect -f '{{.State.Running}}' budget-postgres 2>/dev/null)" = "true" ]; then
     echo "Stopping budget-postgres..."
     docker stop budget-postgres
     echo "budget-postgres stopped."
