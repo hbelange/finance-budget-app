@@ -50,10 +50,10 @@ public class BudgetService {
         LocalDate firstDay = month.atDay(1);
         LocalDate lastDay = month.atEndOfMonth();
 
-        // Ready to assign is total income up to the end of the month minus already assigned money from current and past months
-        BigDecimal totalIncome = transactionRepository.sumIncomeUpToDate(lastDay);
+        // readyToAssign = net of all transactions up to end of month minus all allocations up to this month
+        BigDecimal totalNet = transactionRepository.sumNetUpToDate(lastDay);
         BigDecimal totalAssigned = budgetAllocationRepository.sumAssignedUpToMonth(firstDay);
-        BigDecimal readyToAssign = totalIncome.subtract(totalAssigned);
+        BigDecimal readyToAssign = totalNet.subtract(totalAssigned);
 
         Map<UUID, BigDecimal> assignedByCategory = budgetAllocationRepository.findByMonth(firstDay)
             .stream().collect(Collectors.toMap(a -> a.getCategoryId(), a -> a.getAssigned()));
