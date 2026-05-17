@@ -2,6 +2,7 @@ import { AfterViewInit, ChangeDetectionStrategy, Component, computed, effect, in
 import { ActivatedRoute } from '@angular/router';
 import { CurrencyPipe, DatePipe } from '@angular/common';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { timer } from 'rxjs';
 import {
   MatCell, MatCellDef, MatColumnDef, MatHeaderCell, MatHeaderCellDef,
   MatHeaderRow, MatHeaderRowDef, MatRow, MatRowDef, MatTable, MatTableDataSource,
@@ -18,6 +19,7 @@ import { Transaction, TransactionService } from '../core/services/transaction.se
 import { BudgetStateService } from '../core/services/budget-state.service';
 import { TransactionDialogComponent, TransactionDialogData } from './transaction-dialog.component';
 import { ConfirmDialogComponent } from '../accounts/confirm-dialog.component';
+import { AppLoadingSpinnerComponent } from '../shared/app-loading-spinner';
 
 @Component({
   selector: 'app-transaction-ledger',
@@ -32,6 +34,7 @@ import { ConfirmDialogComponent } from '../accounts/confirm-dialog.component';
     MatPaginator,
     MatButton, MatIconButton,
     MatIcon,
+    AppLoadingSpinnerComponent,
   ],
   templateUrl: './transaction-ledger.component.html',
   styleUrl: './transaction-ledger.component.scss',
@@ -58,6 +61,8 @@ export default class TransactionLedgerComponent implements OnInit, AfterViewInit
   });
   protected readonly dataSource = new MatTableDataSource<Transaction>();
   protected readonly displayedColumns = ['date', 'payee', 'category', 'memo', 'amount', 'cleared', 'actions'];
+  protected isLoading = signal(false);
+  protected isWakingUp = signal(false);
 
   @ViewChild(MatPaginator) private paginator!: MatPaginator;
   @ViewChild(MatSort) private sort!: MatSort;
@@ -117,9 +122,29 @@ export default class TransactionLedgerComponent implements OnInit, AfterViewInit
   }
 
   private loadTransactions(month: string): void {
+    this.isLoading.set(true);
+
     this.transactionService.getTransactions(this.accountId, month).subscribe({
-      next: transactions => { this.dataSource.data = transactions; },
-      error: () => this.snackBar.open('Failed to load transactions.', 'OK', { duration: 5000 }),
+      next: transactions => {
+        this.isLoading.set(false);
+        this.isWakingUp.set(false);
+        this.dataSource.data = transactions;
+      },
+      error: () => {
+        if (this.isWakingUp()) {
+          this.loadTransactions(month);
+        } else {
+          this.isLoading.set(false);
+          this.isWakingUp.set(false);
+          this.snackBar.open('Failed to load transactions.', 'OK', { duration: 5000 });
+        }
+      },
+    });
+
+    timer(5000).subscribe(() => {
+      if (this.isLoading()) {
+        this.isWakingUp.set(true);
+      }
     });
   }
 

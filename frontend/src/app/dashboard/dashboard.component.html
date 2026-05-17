@@ -1,4 +1,6 @@
-@if (dashboardData(); as data) {
+@if (isLoading()) {
+  <app-loading-spinner [isLoading]="isLoading()" [isWakingUp]="isWakingUp()" loadingText="Loading dashboard..."></app-loading-spinner>
+} @else if (dashboardData(); as data) {
   <div class="tiles-grid">
     <mat-card class="tile-card">
       <mat-card-content>

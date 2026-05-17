@@ -1,5 +1,5 @@
 @if (isLoading()) {
-  <app-loading-spinner [isLoading]="isLoading()" [isWakingUp]="isWakingUp()"></app-loading-spinner>
+  <app-loading-spinner [isLoading]="isLoading()" [isWakingUp]="isWakingUp()" loadingText="Loading budget..."></app-loading-spinner>
 } @else {
   <mat-card [class.overassigned]="readyToAssign() < 0" class="rta-card">
     <mat-card-content>
