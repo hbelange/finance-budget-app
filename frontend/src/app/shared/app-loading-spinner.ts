@@ -32,7 +32,6 @@ import { MatProgressSpinner } from '@angular/material/progress-spinner';
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppLoadingSpinnerComponent {
-    protected isLoading = input.required<boolean>();
-    protected isWakingUp = input.required<boolean>();
-
+    isLoading = input.required<boolean>();
+    isWakingUp = input.required<boolean>();
 }
