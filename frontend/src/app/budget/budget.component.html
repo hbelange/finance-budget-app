@@ -78,19 +78,19 @@
                     </span>
                   </td>
                   <td class="col-name">{{ cat.name }}</td>
-                  <td class="col-number">
+                  <td class="col-number col-assigned">
                     <input
                       class="assigned-input"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      [value]="cat.assigned"
+                      type="text"
+                      inputmode="decimal"
+                      [value]="cat.assigned | currency"
+                      (focus)="onAssignedFocus($event, cat)"
                       (blur)="onAssignedBlur(group.id, cat.id, $event)"
                       (keydown.enter)="onAssignedEnter($event)"
                     />
                   </td>
                   <td class="col-number spent">{{ abs(cat.spent) | currency }}</td>
-                  <td class="col-number" [class.positive]="cat.available >= 0" [class.negative]="cat.available < 0">
+                  <td class="col-number col-available" [class.positive]="cat.available >= 0" [class.negative]="cat.available < 0">
                     {{ cat.available | currency }}
                   </td>
                   <ng-template cdkDragPreview>

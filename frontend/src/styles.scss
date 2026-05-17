@@ -37,3 +37,9 @@ body {
   height: 100%;
 }
 /* You can add global styles to this file, and also import other style files */
+
+@media (max-width: 599px) {
+  .mat-mdc-dialog-panel {
+    max-width: 95vw !important;
+  }
+}

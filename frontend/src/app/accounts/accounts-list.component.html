@@ -7,6 +7,34 @@
 
 <mat-table [dataSource]="accounts()">
 
+  <ng-container matColumnDef="mobile">
+    <mat-header-cell *matHeaderCellDef></mat-header-cell>
+    <mat-cell *matCellDef="let account">
+      <div class="mobile-card">
+        <div class="mobile-row-primary">
+          <a [routerLink]="['/accounts', account.id, 'transactions']" class="mobile-name">{{ account.name }}</a>
+          <span
+            [class.positive]="account.balance > 0"
+            [class.negative]="account.balance < 0"
+            [class.neutral]="account.balance === 0"
+            class="mobile-balance"
+          >{{ account.balance | currency }}</span>
+        </div>
+        <div class="mobile-row-secondary">
+          <span class="mobile-type">{{ typeLabels[account.type] }}</span>
+          <div class="mobile-actions">
+            <button mat-icon-button (click)="openEditDialog(account)" aria-label="Edit account">
+              <mat-icon>edit</mat-icon>
+            </button>
+            <button mat-icon-button (click)="confirmDelete(account)" aria-label="Delete account">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+    </mat-cell>
+  </ng-container>
+
   <ng-container matColumnDef="name">
     <mat-header-cell *matHeaderCellDef>Name</mat-header-cell>
     <mat-cell *matCellDef="let account">
@@ -42,8 +70,8 @@
     </mat-cell>
   </ng-container>
 
-  <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
-  <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
+  <mat-header-row *matHeaderRowDef="displayedColumns()"></mat-header-row>
+  <mat-row *matRowDef="let row; columns: displayedColumns();"></mat-row>
 
 </mat-table>
 }

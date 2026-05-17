@@ -1,17 +1,19 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, viewChild } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Router, NavigationEnd, RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
-import { filter, map, startWith, catchError, of, switchMap, take } from 'rxjs';
+import { filter, map, startWith, catchError, of, switchMap, take, tap } from 'rxjs';
 import { MatSidenavContainer, MatSidenav, MatSidenavContent } from '@angular/material/sidenav';
 import { MatToolbar } from '@angular/material/toolbar';
 import { MatNavList, MatListItem } from '@angular/material/list';
 import { MatFormField } from '@angular/material/form-field';
 import { MatSelect } from '@angular/material/select';
 import { MatOption } from '@angular/material/core';
-import { MatButton } from '@angular/material/button';
+import { MatButton, MatIconButton } from '@angular/material/button';
+import { MatIcon } from '@angular/material/icon';
 import { AuthService } from '@auth0/auth0-angular';
 import { BudgetStateService } from './core/services/budget-state.service';
+import { LayoutService } from './core/services/layout.service';
 
 interface DateBounds { first: string | null; last: string | null; }
 
@@ -48,7 +50,7 @@ function buildMonthList(first: string | null, last: string | null): string[] {
     MatToolbar,
     MatNavList, MatListItem,
     MatFormField, MatSelect, MatOption,
-    MatButton,
+    MatButton, MatIconButton, MatIcon,
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss',
@@ -59,10 +61,15 @@ export class App {
   private readonly http = inject(HttpClient);
   private readonly budgetState = inject(BudgetStateService);
   private readonly auth = inject(AuthService);
+  private readonly layout = inject(LayoutService);
+
+  protected readonly sidenav = viewChild<MatSidenav>('sidenav');
+  protected readonly isMobile = this.layout.isMobile;
 
   private readonly currentUrl = toSignal(
     this.router.events.pipe(
       filter(e => e instanceof NavigationEnd),
+      tap(() => { if (this.isMobile()) this.sidenav()?.close(); }),
       map(e => (e as NavigationEnd).urlAfterRedirects),
       startWith(this.router.url)
     ),

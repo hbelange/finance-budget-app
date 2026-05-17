@@ -90,3 +90,26 @@
   color: var(--mat-sys-on-surface-variant);
   margin: 0;
 }
+
+@media (max-width: 599px) {
+  .spending-row {
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    gap: 4px 8px;
+  }
+
+  .spending-name {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .spending-amount {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  mat-progress-bar {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}

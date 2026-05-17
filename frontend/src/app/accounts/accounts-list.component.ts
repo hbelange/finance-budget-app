@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CurrencyPipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -9,6 +9,7 @@ import { MatIcon } from '@angular/material/icon';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Account, AccountService, ACCOUNT_TYPE_LABELS } from '../core/services/account.service';
+import { LayoutService } from '../core/services/layout.service';
 import { AccountDialogComponent } from './account-dialog.component';
 import { ConfirmDialogComponent } from './confirm-dialog.component';
 import { AppLoadingSpinnerComponent } from '../shared/app-loading-spinner';
@@ -25,8 +26,13 @@ export default class AccountsListComponent implements OnInit {
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
 
+  private readonly layout = inject(LayoutService);
+  protected readonly isMobile = this.layout.isMobile;
+
   protected readonly accounts = signal<Account[]>([]);
-  protected readonly displayedColumns = ['name', 'type', 'balance', 'actions'];
+  protected readonly displayedColumns = computed(() =>
+    this.isMobile() ? ['mobile'] : ['name', 'type', 'balance', 'actions']
+  );
   protected readonly typeLabels: Record<string, string> = ACCOUNT_TYPE_LABELS;
   protected isLoading = signal(false);
   protected isWakingUp = signal(false);

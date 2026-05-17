@@ -95,7 +95,7 @@ function toDateStr(date: Date): string {
       display: flex;
       flex-direction: column;
       padding-top: 8px;
-      min-width: 400px;
+      min-width: min(400px, 85vw);
       gap: 4px;
     }
   `],
