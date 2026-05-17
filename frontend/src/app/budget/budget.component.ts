@@ -17,6 +17,8 @@ import { AllocationRequest, BudgetCategory, BudgetGroup, BudgetService, BudgetVi
 import { CategoryService } from '../core/services/category.service';
 import { ConfirmDialogComponent } from '../accounts/confirm-dialog.component';
 import { NameDialogComponent } from '../shared/name-dialog.component';
+import { timer } from 'rxjs';
+import { AppLoadingSpinnerComponent } from '../shared/app-loading-spinner';
 
 @Component({
   selector: 'app-budget',
@@ -28,7 +30,7 @@ import { NameDialogComponent } from '../shared/name-dialog.component';
     MatExpansionPanel, MatExpansionPanelHeader,
     MatExpansionPanelTitle, MatExpansionPanelDescription,
     MatIconButton, MatButton,
-    MatIcon,
+    MatIcon, AppLoadingSpinnerComponent
   ],
   templateUrl: './budget.component.html',
   styleUrl: './budget.component.scss',
@@ -47,6 +49,9 @@ export default class BudgetComponent {
   protected readonly readyToAssign = computed(() => this.budgetView()?.readyToAssign ?? 0);
 
   private readonly _monthEffect = effect(() => this.loadBudget(this.month()));
+
+  protected isLoading = signal(false);
+  protected isWakingUp = signal(false);
 
   protected groupTotal(group: BudgetGroup): number {
     return group.categories.reduce((sum, c) => sum + c.assigned, 0);
@@ -194,9 +199,29 @@ export default class BudgetComponent {
   }
 
   private loadBudget(month: string): void {
+    this.isLoading.set(true);
+
     this.budgetService.getBudget(month).subscribe({
-      next: view => this.budgetView.set(view),
-      error: () => this.snackBar.open('Failed to load budget.', 'OK', { duration: 5000 }),
+      next: view => {
+        this.isLoading.set(false);
+        this.isWakingUp.set(false);
+        this.budgetView.set(view);
+      },
+      error: () => {
+        if (this.isWakingUp()) {
+          this.loadBudget(this.month());
+        } else {
+          this.isLoading.set(false);
+          this.isWakingUp.set(false);  
+          this.snackBar.open('Failed to load budget.', 'OK', { duration: 5000 });
+        }
+      }
+    });
+
+    timer(5000).subscribe(() => {
+      if (this.isLoading()) {
+        this.isWakingUp.set(true);
+      }
     });
   }
 }

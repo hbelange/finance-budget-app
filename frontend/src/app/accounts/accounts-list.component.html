@@ -1,3 +1,6 @@
+@if (isLoading()) {
+  <app-loading-spinner [isLoading]="isLoading()" [isWakingUp]="isWakingUp()" loadingText="Loading accounts..."></app-loading-spinner>
+} @else {
 <div class="page-header">
   <button mat-flat-button (click)="openCreateDialog()">Add Account</button>
 </div>
@@ -43,3 +46,4 @@
   <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
 
 </mat-table>
+}
