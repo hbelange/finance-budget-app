@@ -211,7 +211,9 @@ export default class BudgetComponent {
         if (this.isWakingUp()) {
           this.loadBudget(this.month());
         } else {
-            this.snackBar.open('Failed to load budget.', 'OK', { duration: 5000 });
+          this.isLoading.set(false);
+          this.isWakingUp.set(false);  
+          this.snackBar.open('Failed to load budget.', 'OK', { duration: 5000 });
         }
       }
     });
