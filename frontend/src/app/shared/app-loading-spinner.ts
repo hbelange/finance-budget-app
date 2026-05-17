@@ -13,7 +13,7 @@ import { MatProgressSpinner } from '@angular/material/progress-spinner';
             } @else if (isLoading()) {
             <div class="loading">
                 <mat-spinner diameter="50"></mat-spinner>
-                <p>Loading budget...</p>
+                <p>{{ loadingText() }}</p>
             </div>
         }
     `,
@@ -34,4 +34,5 @@ import { MatProgressSpinner } from '@angular/material/progress-spinner';
 export class AppLoadingSpinnerComponent {
     isLoading = input.required<boolean>();
     isWakingUp = input.required<boolean>();
+    loadingText = input('Loading...');
 }

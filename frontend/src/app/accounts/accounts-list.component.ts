@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@ang
 import { RouterLink } from '@angular/router';
 import { CurrencyPipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
+import { timer } from 'rxjs';
 import { MatTable, MatColumnDef, MatHeaderCellDef, MatCellDef, MatHeaderRowDef, MatRowDef, MatHeaderCell, MatCell, MatHeaderRow, MatRow } from '@angular/material/table';
 import { MatButton, MatIconButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
@@ -10,10 +11,11 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { Account, AccountService, ACCOUNT_TYPE_LABELS } from '../core/services/account.service';
 import { AccountDialogComponent } from './account-dialog.component';
 import { ConfirmDialogComponent } from './confirm-dialog.component';
+import { AppLoadingSpinnerComponent } from '../shared/app-loading-spinner';
 
 @Component({
   selector: 'app-accounts-list',
-  imports: [RouterLink, CurrencyPipe, MatTable, MatColumnDef, MatHeaderCellDef, MatCellDef, MatHeaderRowDef, MatRowDef, MatHeaderCell, MatCell, MatHeaderRow, MatRow, MatButton, MatIconButton, MatIcon],
+  imports: [RouterLink, CurrencyPipe, MatTable, MatColumnDef, MatHeaderCellDef, MatCellDef, MatHeaderRowDef, MatRowDef, MatHeaderCell, MatCell, MatHeaderRow, MatRow, MatButton, MatIconButton, MatIcon, AppLoadingSpinnerComponent],
   templateUrl: './accounts-list.component.html',
   styleUrl: './accounts-list.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -26,6 +28,8 @@ export default class AccountsListComponent implements OnInit {
   protected readonly accounts = signal<Account[]>([]);
   protected readonly displayedColumns = ['name', 'type', 'balance', 'actions'];
   protected readonly typeLabels: Record<string, string> = ACCOUNT_TYPE_LABELS;
+  protected isLoading = signal(false);
+  protected isWakingUp = signal(false);
 
   ngOnInit(): void {
     this.loadAccounts();
@@ -67,9 +71,29 @@ export default class AccountsListComponent implements OnInit {
   }
 
   private loadAccounts(): void {
+    this.isLoading.set(true);
+
     this.accountService.getAccounts().subscribe({
-      next: accounts => this.accounts.set(accounts),
-      error: () => this.snackBar.open('Failed to load accounts.', 'OK', { duration: 5000 }),
+      next: accounts => {
+        this.isLoading.set(false);
+        this.isWakingUp.set(false);
+        this.accounts.set(accounts);
+      },
+      error: () => {
+        if (this.isWakingUp()) {
+          this.loadAccounts();
+        } else {
+          this.isLoading.set(false);
+          this.isWakingUp.set(false);
+          this.snackBar.open('Failed to load accounts.', 'OK', { duration: 5000 });
+        }
+      },
+    });
+
+    timer(5000).subscribe(() => {
+      if (this.isLoading()) {
+        this.isWakingUp.set(true);
+      }
     });
   }
 }
