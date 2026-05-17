@@ -34,24 +34,24 @@ public class ReportService {
         this.budgetCategoryRepository = budgetCategoryRepository;
     }
 
-    public DashboardDto getDashboard(String monthParam) {
+    public DashboardDto getDashboard(String monthParam, String userSub) {
         YearMonth month = parseMonth(monthParam);
         LocalDate firstDay = month.atDay(1);
         LocalDate lastDay = month.atEndOfMonth();
 
-        BigDecimal netWorth = transactionRepository.sumNetWorth();
-        BigDecimal income = transactionRepository.sumIncomeForMonth(firstDay, lastDay);
-        BigDecimal spent = transactionRepository.sumSpentForMonth(firstDay, lastDay).abs();
+        BigDecimal netWorth = transactionRepository.sumNetWorth(userSub);
+        BigDecimal income = transactionRepository.sumIncomeForMonth(firstDay, lastDay, userSub);
+        BigDecimal spent = transactionRepository.sumSpentForMonth(firstDay, lastDay, userSub).abs();
 
         return new DashboardDto(netWorth, income, spent);
     }
 
-    public List<SpendingByCategoryDto> getSpendingByCategory(String monthParam) {
+    public List<SpendingByCategoryDto> getSpendingByCategory(String monthParam, String userSub) {
         YearMonth month = parseMonth(monthParam);
         LocalDate firstDay = month.atDay(1);
         LocalDate lastDay = month.atEndOfMonth();
 
-        List<CategorySpent> expenses = transactionRepository.findExpenseByCategoryForMonth(firstDay, lastDay);
+        List<CategorySpent> expenses = transactionRepository.findExpenseByCategoryForMonth(firstDay, lastDay, userSub);
         if (expenses.isEmpty()) {
             return List.of();
         }

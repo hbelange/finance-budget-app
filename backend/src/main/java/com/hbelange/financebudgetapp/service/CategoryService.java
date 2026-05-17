@@ -38,11 +38,11 @@ public class CategoryService {
         this.budgetAllocationRepository = budgetAllocationRepository;
     }
 
-    public List<CategoryGroupDTO> findAllGroups() {
-        return categoryGroupRepository.findAllByOrderBySortOrderAsc().stream()
+    public List<CategoryGroupDTO> findAllGroups(String userSub) {
+        return categoryGroupRepository.findAllByUserSubOrderBySortOrderAsc(userSub).stream()
             .map(g -> {
                 List<BudgetCategoryDTO> categories = budgetCategoryRepository
-                    .findByGroupIdOrderBySortOrderAsc(g.getId()).stream()
+                    .findByGroupOrderBySortOrderAsc(g).stream()
                     .map(c -> new BudgetCategoryDTO(c.getId(), c.getName()))
                     .toList();
                 return new CategoryGroupDTO(g.getId(), g.getName(), categories);
@@ -50,78 +50,109 @@ public class CategoryService {
             .toList();
     }
 
-    public CategoryGroupDTO createGroup(CategoryGroupRequest req) {
-        int nextOrder = categoryGroupRepository.findTopByOrderBySortOrderDesc()
+    public CategoryGroupDTO createGroup(CategoryGroupRequest req, String userSub) {
+        int nextOrder = categoryGroupRepository.findTopByUserSubOrderBySortOrderDesc(userSub)
             .map(g -> g.getSortOrder() + 1)
             .orElse(0);
         CategoryGroup group = new CategoryGroup();
         group.setName(req.name());
         group.setSortOrder(nextOrder);
+        group.setUserSub(userSub);
         group = categoryGroupRepository.save(group);
         return new CategoryGroupDTO(group.getId(), group.getName(), List.of());
     }
 
-    public CategoryGroupDTO addCategory(UUID groupId, BudgetCategoryRequest req) {
+    public CategoryGroupDTO addCategory(UUID groupId, BudgetCategoryRequest req, String userSub) {
         CategoryGroup group = categoryGroupRepository.findById(groupId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category group not found"));
 
-        int nextOrder = budgetCategoryRepository.findTopByGroupIdOrderBySortOrderDesc(groupId)
+        // If group doesn't belong to user, throw 403
+        if (!group.getUserSub().equals(userSub)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have permission to add a category to this group");
+        }
+
+        int nextOrder = budgetCategoryRepository.findTopByGroupOrderBySortOrderDesc(group)
             .map(c -> c.getSortOrder() + 1)
             .orElse(0);
         BudgetCategory category = new BudgetCategory();
-        category.setGroupId(groupId);
+        category.setGroup(group);
         category.setName(req.name());
         category.setSortOrder(nextOrder);
         budgetCategoryRepository.save(category);
 
         List<BudgetCategoryDTO> categories = budgetCategoryRepository
-            .findByGroupIdOrderBySortOrderAsc(groupId).stream()
+            .findByGroupOrderBySortOrderAsc(group).stream()
             .map(c -> new BudgetCategoryDTO(c.getId(), c.getName()))
             .toList();
 
         return new CategoryGroupDTO(group.getId(), group.getName(), categories);
     }
 
-    public void renameCategory(UUID id, BudgetCategoryRequest req) {
+    public void renameCategory(UUID id, BudgetCategoryRequest req, String userSub) {
         BudgetCategory category = budgetCategoryRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found"));
+        // If category doesn't belong to user, throw 403
+        if (!category.getGroup().getUserSub().equals(userSub)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have permission to rename this category");
+        }
         category.setName(req.name());
         budgetCategoryRepository.save(category);
     }
 
-    public void reorderGroups(List<SortItem> items) {
+    public void reorderGroups(List<SortItem> items, String userSub) {
         Map<UUID, Integer> orderMap = items.stream()
             .collect(Collectors.toMap(SortItem::id, SortItem::sortOrder));
         List<CategoryGroup> groups = categoryGroupRepository.findAllById(orderMap.keySet());
+
+        // If any group doesn't belong to user, throw 403
+        if (groups.stream().anyMatch(g -> !g.getUserSub().equals(userSub))) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have permission to reorder one or more of these groups");
+        }
+
         groups.forEach(g -> g.setSortOrder(orderMap.get(g.getId())));
         categoryGroupRepository.saveAll(groups);
     }
 
-    public void reorderCategories(List<SortItem> items) {
+    public void reorderCategories(List<SortItem> items, String userSub) {
         Map<UUID, Integer> orderMap = items.stream()
             .collect(Collectors.toMap(SortItem::id, SortItem::sortOrder));
         List<BudgetCategory> categories = budgetCategoryRepository.findAllById(orderMap.keySet());
+
+        // If any category doesn't belong to user, throw 403
+        if (categories.stream().anyMatch(c -> !c.getGroup().getUserSub().equals(userSub))) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have permission to reorder one or more of these categories");
+        }
+
         categories.forEach(c -> c.setSortOrder(orderMap.get(c.getId())));
         budgetCategoryRepository.saveAll(categories);
     }
 
-    public CategoryGroupDTO renameGroup(UUID id, CategoryGroupRequest req) {
+    public CategoryGroupDTO renameGroup(UUID id, CategoryGroupRequest req, String userSub) {
         CategoryGroup group = categoryGroupRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category group not found"));
+
+        if (!group.getUserSub().equals(userSub)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have permission to rename this group");
+        }
+
         group.setName(req.name());
         group = categoryGroupRepository.save(group);
         List<BudgetCategoryDTO> categories = budgetCategoryRepository
-            .findByGroupIdOrderBySortOrderAsc(id).stream()
+            .findByGroupOrderBySortOrderAsc(group).stream()
             .map(c -> new BudgetCategoryDTO(c.getId(), c.getName()))
             .toList();
         return new CategoryGroupDTO(group.getId(), group.getName(), categories);
     }
 
     @Transactional
-    public void deleteGroup(UUID id) {
-        if (!categoryGroupRepository.existsById(id)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Category group not found");
+    public void deleteGroup(UUID id, String userSub) {
+        CategoryGroup group = categoryGroupRepository.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category group not found"));
+
+        if (!group.getUserSub().equals(userSub)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have permission to delete this group");
         }
+
         if (budgetCategoryRepository.existsTransactionsByGroupId(id)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Group contains categories with existing transactions");
         }
@@ -131,10 +162,15 @@ public class CategoryService {
     }
 
     @Transactional
-    public void deleteCategory(UUID id) {
-        if (!budgetCategoryRepository.existsById(id)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found");
+    public void deleteCategory(UUID id, String userSub) {
+
+        BudgetCategory category = budgetCategoryRepository.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found"));
+
+        if (!category.getGroup().getUserSub().equals(userSub)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have permission to delete this category");
         }
+
         if (budgetCategoryRepository.existsTransactionsByCategoryId(id)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Category has existing transactions");
         }

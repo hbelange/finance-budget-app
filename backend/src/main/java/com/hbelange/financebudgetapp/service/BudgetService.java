@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.hbelange.financebudgetapp.dto.AllocationRequest;
+import com.hbelange.financebudgetapp.entity.BudgetCategory;
 import com.hbelange.financebudgetapp.dto.BudgetCategoryViewDTO;
 import com.hbelange.financebudgetapp.dto.BudgetGroupDTO;
 import com.hbelange.financebudgetapp.dto.BudgetViewDTO;
@@ -45,43 +46,44 @@ public class BudgetService {
         this.transactionRepository = transactionRepository;
     }
 
-    public BudgetViewDTO getBudget(String monthParam) {
+    public BudgetViewDTO getBudget(String monthParam, String userSub) {
         YearMonth month = parseMonth(monthParam);
         LocalDate firstDay = month.atDay(1);
         LocalDate lastDay = month.atEndOfMonth();
 
-        // readyToAssign = net of all transactions up to end of month minus all allocations up to this month
-        BigDecimal totalNet = transactionRepository.sumNetUpToDate(lastDay);
-        BigDecimal totalAssigned = budgetAllocationRepository.sumAssignedUpToMonth(firstDay);
+        BigDecimal totalNet = transactionRepository.sumNetUpToDate(lastDay, userSub);
+        BigDecimal totalAssigned = budgetAllocationRepository.sumAssignedUpToMonth(firstDay, userSub);
         BigDecimal readyToAssign = totalNet.subtract(totalAssigned);
 
-        Map<UUID, BigDecimal> assignedByCategory = budgetAllocationRepository.findByMonth(firstDay)
+        Map<UUID, BigDecimal> assignedByCategory = budgetAllocationRepository.findByMonthAndUserSub(firstDay, userSub)
             .stream().collect(Collectors.toMap(a -> a.getCategoryId(), a -> a.getAssigned()));
 
-        Map<UUID, BigDecimal> spentByCategory = transactionRepository.findSpentByCategoryForMonth(firstDay, lastDay)
+        Map<UUID, BigDecimal> spentByCategory = transactionRepository.findSpentByCategoryForMonth(firstDay, lastDay, userSub)
             .stream().collect(Collectors.toMap(CategorySpent::categoryId, CategorySpent::spent));
 
-        List<BudgetGroupDTO> groups = categoryGroupRepository.findAllByOrderBySortOrderAsc().stream()
+        List<BudgetGroupDTO> groups = categoryGroupRepository.findAllByUserSubOrderBySortOrderAsc(userSub).stream()
             .map(g -> {
                 List<BudgetCategoryViewDTO> cats = budgetCategoryRepository
-                    .findByGroupIdOrderBySortOrderAsc(g.getId()).stream()
+                    .findByGroupOrderBySortOrderAsc(g).stream()
                     .map(c -> {
                         BigDecimal assigned = assignedByCategory.getOrDefault(c.getId(), BigDecimal.ZERO);
                         BigDecimal spent = spentByCategory.getOrDefault(c.getId(), BigDecimal.ZERO);
                         BigDecimal available = assigned.add(spent);
                         return new BudgetCategoryViewDTO(c.getId(), c.getName(), assigned, spent, available);
-                    }).toList();
+                    }).collect(Collectors.toList());
                 return new BudgetGroupDTO(g.getId(), g.getName(), cats);
-            }).toList();
+            }).collect(Collectors.toList());
 
         return new BudgetViewDTO(readyToAssign, groups);
     }
 
     @Transactional
-    public void upsertAllocation(AllocationRequest req) {
+    public void upsertAllocation(AllocationRequest req, String userSub) {
         YearMonth month = parseMonth(req.month());
-        if (!budgetCategoryRepository.existsById(req.categoryId())) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found");
+        BudgetCategory category = budgetCategoryRepository.findById(req.categoryId())
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found"));
+        if (!category.getGroup().getUserSub().equals(userSub)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have permission to allocate to this category");
         }
         budgetAllocationRepository.upsert(req.categoryId(), month.atDay(1), req.assigned());
     }

@@ -33,4 +33,7 @@ public class Account {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private AccountType type;
+
+    @Column(nullable = false, name = "user_sub")
+    private String userSub;
 }
