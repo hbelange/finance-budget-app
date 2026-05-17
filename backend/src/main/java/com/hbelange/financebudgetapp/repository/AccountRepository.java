@@ -21,4 +21,9 @@ public interface AccountRepository extends JpaRepository<Account, UUID> {
 
     @Query("SELECT COUNT(t) > 0 FROM Transaction t WHERE t.account.id = :accountId")
     boolean existsTransactionsByAccountId(UUID accountId);
+
+    List<Account> findByUserSub(String userSub);
+
+    @Query("SELECT NEW com.hbelange.financebudgetapp.dto.AccountBalance(t.account.id, COALESCE(SUM(t.amount), 0)) FROM Transaction t WHERE t.account.userSub = :userSub GROUP BY t.account.id")
+    List<AccountBalance> findBalancesByUserSub(String userSub);
 }

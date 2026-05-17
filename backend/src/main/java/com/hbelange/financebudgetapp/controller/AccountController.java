@@ -4,7 +4,9 @@ import java.util.List;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -33,23 +35,23 @@ public class AccountController {
     }
 
     @GetMapping
-    public List<AccountDTO> getAllAccounts() {
-        return accountService.findAll();
+    public List<AccountDTO> getAllAccounts(@AuthenticationPrincipal Jwt jwt) {
+        return accountService.findAll(jwt.getSubject());
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public AccountDTO createAccount(@Valid @RequestBody AccountRequest req) {
-        return accountService.create(req);
+    public AccountDTO createAccount(@Valid @RequestBody AccountRequest req, @AuthenticationPrincipal Jwt jwt) {
+        return accountService.create(req, jwt.getSubject());
     }
 
     @PutMapping("/{id}")
-    public AccountDTO updateAccount(@PathVariable UUID id, @Valid @RequestBody AccountRequest req) {
-        return accountService.update(id, req);
+    public AccountDTO updateAccount(@PathVariable UUID id, @Valid @RequestBody AccountRequest req, @AuthenticationPrincipal Jwt jwt) {
+        return accountService.update(id, req, jwt.getSubject());
     }
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteAccount(@PathVariable UUID id) {
-        accountService.delete(id);
+    public void deleteAccount(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
+        accountService.delete(id, jwt.getSubject());
     }
 }

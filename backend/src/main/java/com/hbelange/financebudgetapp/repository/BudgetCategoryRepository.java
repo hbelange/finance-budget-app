@@ -1,5 +1,6 @@
 package com.hbelange.financebudgetapp.repository;
 
+
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -11,19 +12,20 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.hbelange.financebudgetapp.entity.BudgetCategory;
+import com.hbelange.financebudgetapp.entity.CategoryGroup;
 
 @Repository
 public interface BudgetCategoryRepository extends JpaRepository<BudgetCategory, UUID> {
-    List<BudgetCategory> findByGroupIdOrderBySortOrderAsc(UUID groupId);
-    Optional<BudgetCategory> findTopByGroupIdOrderBySortOrderDesc(UUID groupId);
+    List<BudgetCategory> findByGroupOrderBySortOrderAsc(CategoryGroup group);
+    Optional<BudgetCategory> findTopByGroupOrderBySortOrderDesc(CategoryGroup group);
 
     @Query("SELECT COUNT(t) > 0 FROM Transaction t WHERE t.categoryId = :categoryId")
     boolean existsTransactionsByCategoryId(UUID categoryId);
 
-    @Query("SELECT COUNT(t) > 0 FROM Transaction t WHERE t.categoryId IN (SELECT bc.id FROM BudgetCategory bc WHERE bc.groupId = :groupId)")
+    @Query("SELECT COUNT(t) > 0 FROM Transaction t WHERE t.categoryId IN (SELECT bc.id FROM BudgetCategory bc WHERE bc.group.id = :groupId)")
     boolean existsTransactionsByGroupId(@Param("groupId") UUID groupId);
 
     @Modifying
-    @Query("DELETE FROM BudgetCategory bc WHERE bc.groupId = :groupId")
+    @Query("DELETE FROM BudgetCategory bc WHERE bc.group.id = :groupId")
     void deleteByGroupId(@Param("groupId") UUID groupId);
 }
