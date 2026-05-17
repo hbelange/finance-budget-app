@@ -208,9 +208,16 @@ export default class BudgetComponent {
         this.budgetView.set(view);
       },
       error: () => {
+        const wasWakingUp = this.isWakingUp();
         this.isLoading.set(false);
         this.isWakingUp.set(false);
-        this.snackBar.open('Failed to load budget.', 'OK', { duration: 5000 });
+        if (wasWakingUp) {
+          timer(3000).subscribe(() => {
+            this.loadBudget(this.month());
+          });
+        } else {
+            this.snackBar.open('Failed to load budget.', 'OK', { duration: 5000 });
+        }
       }
     });
 
