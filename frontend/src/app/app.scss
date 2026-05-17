@@ -22,8 +22,24 @@ mat-sidenav {
   flex: 1;
 }
 
+.mobile-month-bar {
+  display: flex;
+  justify-content: center;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface-container);
+
+  mat-form-field {
+    width: 200px;
+  }
+}
+
 .page-content {
   padding: 28px 32px;
+
+  @media (max-width: 599px) {
+    padding: 16px;
+  }
 }
 
 .mat-mdc-list-item.active-link {

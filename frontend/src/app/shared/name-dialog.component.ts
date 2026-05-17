@@ -34,7 +34,7 @@ export interface NameDialogData {
       display: flex;
       flex-direction: column;
       padding-top: 8px;
-      min-width: 320px;
+      min-width: min(320px, 85vw);
     }
   `],
   changeDetection: ChangeDetectionStrategy.OnPush,

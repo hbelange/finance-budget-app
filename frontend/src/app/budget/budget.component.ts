@@ -22,6 +22,7 @@ import { AppLoadingSpinnerComponent } from '../shared/app-loading-spinner';
 
 @Component({
   selector: 'app-budget',
+  providers: [CurrencyPipe],
   imports: [
     CurrencyPipe,
     CdkDropList, CdkDrag, CdkDragHandle, CdkDragPreview,
@@ -42,6 +43,7 @@ export default class BudgetComponent {
   private readonly budgetState = inject(BudgetStateService);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly currencyPipe = inject(CurrencyPipe);
 
   private readonly month = toSignal(this.budgetState.month$, { requireSync: true });
 
@@ -61,6 +63,12 @@ export default class BudgetComponent {
     return Math.abs(n);
   }
 
+  protected onAssignedFocus(event: Event, cat: BudgetCategory): void {
+    const input = event.target as HTMLInputElement;
+    input.value = cat.assigned === 0 ? '' : String(cat.assigned);
+    input.select();
+  }
+
   protected onAssignedEnter(event: Event): void {
     (event.target as HTMLInputElement).blur();
   }
@@ -68,22 +76,52 @@ export default class BudgetComponent {
   protected onAssignedBlur(groupId: string, catId: string, event: Event): void {
     const input = event.target as HTMLInputElement;
     const newAssigned = parseFloat(input.value) || 0;
+
+    input.value = this.currencyPipe.transform(newAssigned) ?? '$0.00';
+
     const view = this.budgetView();
     if (!view) return;
 
     const cat = view.groups.find(g => g.id === groupId)?.categories.find(c => c.id === catId);
     if (!cat || cat.assigned === newAssigned) return;
 
+    const delta = newAssigned - cat.assigned;
+
+    this.budgetView.update(v => !v ? v : {
+      ...v,
+      readyToAssign: v.readyToAssign - delta,
+      groups: v.groups.map(g => g.id !== groupId ? g : {
+        ...g,
+        categories: g.categories.map(c => c.id !== catId ? c : {
+          ...c,
+          assigned: newAssigned,
+          available: c.available + delta,
+        }),
+      }),
+    });
+
     const req: AllocationRequest = { categoryId: catId, month: this.month(), assigned: newAssigned };
 
     this.budgetService.upsertAllocation(req).subscribe({
-      next: () => this.loadBudget(this.month()),
       error: () => {
-        this.budgetView.update(v => v ? { ...v } : v);
+        this.budgetView.update(v => !v ? v : {
+          ...v,
+          readyToAssign: v.readyToAssign + delta,
+          groups: v.groups.map(g => g.id !== groupId ? g : {
+            ...g,
+            categories: g.categories.map(c => c.id !== catId ? c : {
+              ...c,
+              assigned: cat.assigned,
+              available: c.available - delta,
+            }),
+          }),
+        });
+        input.value = this.currencyPipe.transform(cat.assigned) ?? '$0.00';
         this.snackBar.open('Failed to save allocation.', 'OK', { duration: 5000 });
       },
     });
   }
+
 
   protected onGroupDrop(event: CdkDragDrop<BudgetGroup[]>): void {
     if (event.previousIndex === event.currentIndex) return;

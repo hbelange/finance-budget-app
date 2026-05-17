@@ -55,7 +55,7 @@ const ACCOUNT_TYPES = Object.keys(ACCOUNT_TYPE_LABELS) as AccountType[];
       display: flex;
       flex-direction: column;
       padding-top: 8px;
-      min-width: 320px;
+      min-width: min(320px, 85vw);
     }
   `],
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -17,6 +17,7 @@ import { Account, AccountService } from '../core/services/account.service';
 import { CategoryGroup, CategoryService } from '../core/services/category.service';
 import { Transaction, TransactionService } from '../core/services/transaction.service';
 import { BudgetStateService } from '../core/services/budget-state.service';
+import { LayoutService } from '../core/services/layout.service';
 import { TransactionDialogComponent, TransactionDialogData } from './transaction-dialog.component';
 import { ConfirmDialogComponent } from '../accounts/confirm-dialog.component';
 import { AppLoadingSpinnerComponent } from '../shared/app-loading-spinner';
@@ -59,8 +60,15 @@ export default class TransactionLedgerComponent implements OnInit, AfterViewInit
     this.categories().forEach(g => g.categories.forEach(c => map.set(c.id, c.name)));
     return map;
   });
+  private readonly layout = inject(LayoutService);
+  protected readonly isMobile = this.layout.isMobile;
+
   protected readonly dataSource = new MatTableDataSource<Transaction>();
-  protected readonly displayedColumns = ['date', 'payee', 'category', 'memo', 'amount', 'cleared', 'actions'];
+  protected readonly displayedColumns = computed(() =>
+    this.isMobile()
+      ? ['mobile']
+      : ['date', 'payee', 'category', 'memo', 'amount', 'cleared', 'actions']
+  );
   protected isLoading = signal(false);
   protected isWakingUp = signal(false);
 

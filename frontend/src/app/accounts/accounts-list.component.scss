@@ -40,3 +40,56 @@ a {
 .neutral {
   color: var(--mat-sys-on-surface-variant);
 }
+
+.mobile-card {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 0;
+}
+
+.mobile-row-primary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.mobile-name {
+  font-weight: 500;
+  font-size: 0.9375rem;
+}
+
+.mobile-balance {
+  font-weight: 500;
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.mobile-row-secondary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.mobile-type {
+  font-size: 0.8125rem;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.mobile-actions {
+  display: flex;
+}
+
+@media (max-width: 599px) {
+  mat-table {
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+
+  mat-header-row {
+    display: none;
+  }
+}
