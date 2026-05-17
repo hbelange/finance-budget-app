@@ -18,7 +18,7 @@ import { CategoryService } from '../core/services/category.service';
 import { ConfirmDialogComponent } from '../accounts/confirm-dialog.component';
 import { NameDialogComponent } from '../shared/name-dialog.component';
 import { timer } from 'rxjs';
-import { MatProgressSpinner } from '@angular/material/progress-spinner';
+import { AppLoadingSpinnerComponent } from '../shared/app-loading-spinner';
 
 @Component({
   selector: 'app-budget',
@@ -30,7 +30,7 @@ import { MatProgressSpinner } from '@angular/material/progress-spinner';
     MatExpansionPanel, MatExpansionPanelHeader,
     MatExpansionPanelTitle, MatExpansionPanelDescription,
     MatIconButton, MatButton,
-    MatIcon, MatProgressSpinner,
+    MatIcon, AppLoadingSpinnerComponent
   ],
   templateUrl: './budget.component.html',
   styleUrl: './budget.component.scss',

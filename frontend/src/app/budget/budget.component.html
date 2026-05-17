@@ -1,13 +1,5 @@
-@if (isLoading() && isWakingUp()) {
-  <div class="waking-up">
-    <mat-spinner diameter="50"></mat-spinner>
-    <p>Waking up the server...</p>
-  </div>
-} @else if (isLoading()) {
-  <div class="loading">
-    <mat-spinner diameter="50"></mat-spinner>
-    <p>Loading budget...</p>
-  </div>
+@if (isLoading()) {
+  <app-loading-spinner [isLoading]="isLoading()" [isWakingUp]="isWakingUp()"></app-loading-spinner>
 } @else {
   <mat-card [class.overassigned]="readyToAssign() < 0" class="rta-card">
     <mat-card-content>

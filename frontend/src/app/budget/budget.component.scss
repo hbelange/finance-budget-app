@@ -2,17 +2,6 @@
   display: block;
 }
 
-.loading,
-.waking-up {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  min-height: 240px;
-  color: var(--mat-sys-on-surface-variant);
-}
-
 .rta-card {
   display: block;
   margin-bottom: 32px;
