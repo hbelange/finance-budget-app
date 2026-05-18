@@ -16,16 +16,17 @@ import com.hbelange.financebudgetapp.entity.BudgetAllocation;
 @Repository
 public interface BudgetAllocationRepository extends JpaRepository<BudgetAllocation, UUID> {
 
-    List<BudgetAllocation> findByMonth(LocalDate month);
+    @Query("SELECT ba FROM BudgetAllocation ba WHERE ba.month = :month AND ba.categoryId IN (SELECT bc.id FROM BudgetCategory bc WHERE bc.group.userSub = :userSub)")
+    List<BudgetAllocation> findByMonthAndUserSub(@Param("month") LocalDate month, @Param("userSub") String userSub);
 
-    @Query("SELECT COALESCE(SUM(ba.assigned), 0) FROM BudgetAllocation ba WHERE ba.month <= :firstDayOfMonth")
-    BigDecimal sumAssignedUpToMonth(@Param("firstDayOfMonth") LocalDate firstDayOfMonth);
+    @Query("SELECT COALESCE(SUM(ba.assigned), 0) FROM BudgetAllocation ba WHERE ba.month <= :firstDayOfMonth AND ba.categoryId IN (SELECT bc.id FROM BudgetCategory bc WHERE bc.group.userSub = :userSub)")
+    BigDecimal sumAssignedUpToMonth(@Param("firstDayOfMonth") LocalDate firstDayOfMonth, @Param("userSub") String userSub);
 
     @Modifying
     @Query(nativeQuery = true, value = """
-        INSERT INTO budget_allocations (category_id, month, assigned)
+        INSERT INTO budget_allocations (category_id, "month", assigned)
         VALUES (:categoryId, :month, :assigned)
-        ON CONFLICT (category_id, month) DO UPDATE SET assigned = EXCLUDED.assigned
+        ON CONFLICT (category_id, "month") DO UPDATE SET assigned = EXCLUDED.assigned
         """)
     void upsert(@Param("categoryId") UUID categoryId, @Param("month") LocalDate month, @Param("assigned") BigDecimal assigned);
 
@@ -33,6 +34,6 @@ public interface BudgetAllocationRepository extends JpaRepository<BudgetAllocati
     void deleteByCategoryId(UUID categoryId);
 
     @Modifying
-    @Query("DELETE FROM BudgetAllocation ba WHERE ba.categoryId IN (SELECT bc.id FROM BudgetCategory bc WHERE bc.groupId = :groupId)")
+    @Query("DELETE FROM BudgetAllocation ba WHERE ba.categoryId IN (SELECT bc.id FROM BudgetCategory bc WHERE bc.group.id = :groupId)")
     void deleteByGroupId(@Param("groupId") UUID groupId);
 }

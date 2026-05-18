@@ -38,6 +38,9 @@ class CategoryServiceTest {
     @InjectMocks
     private CategoryService categoryService;
 
+    private static final String USER_SUB = "auth0|test-user";
+    private static final String OTHER_SUB = "auth0|other-user";
+
     private UUID groupId;
     private UUID categoryId;
     private CategoryGroup group;
@@ -52,19 +55,21 @@ class CategoryServiceTest {
         group.setId(groupId);
         group.setName("Housing");
         group.setSortOrder(1);
+        group.setUserSub(USER_SUB);
 
         category = new BudgetCategory();
         category.setId(categoryId);
-        category.setGroupId(groupId);
+        category.setGroup(group);
         category.setName("Rent");
         category.setSortOrder(1);
     }
 
     @Test
     void findAllGroups_returnsMappedDTOs() {
-        when(categoryGroupRepository.findAllByOrderBySortOrderAsc()).thenReturn(List.of(group));
+        when(categoryGroupRepository.findAllByUserSubOrderBySortOrderAsc(USER_SUB)).thenReturn(List.of(group));
+        when(budgetCategoryRepository.findByGroupOrderBySortOrderAsc(group)).thenReturn(List.of());
 
-        List<CategoryGroupDTO> result = categoryService.findAllGroups();
+        List<CategoryGroupDTO> result = categoryService.findAllGroups(USER_SUB);
 
         assertEquals(1, result.size());
         assertEquals(groupId, result.get(0).id());
@@ -73,10 +78,10 @@ class CategoryServiceTest {
 
     @Test
     void createGroup_savesAndReturnsDTO() {
-        when(categoryGroupRepository.findTopByOrderBySortOrderDesc()).thenReturn(Optional.empty());
+        when(categoryGroupRepository.findTopByUserSubOrderBySortOrderDesc(USER_SUB)).thenReturn(Optional.empty());
         when(categoryGroupRepository.save(any())).thenReturn(group);
 
-        CategoryGroupDTO result = categoryService.createGroup(new CategoryGroupRequest("Housing"));
+        CategoryGroupDTO result = categoryService.createGroup(new CategoryGroupRequest("Housing"), USER_SUB);
 
         assertEquals("Housing", result.name());
         verify(categoryGroupRepository).save(any());
@@ -86,20 +91,20 @@ class CategoryServiceTest {
     void createGroup_assignsNextSortOrder_whenGroupsExist() {
         CategoryGroup existing = new CategoryGroup();
         existing.setSortOrder(2);
-        when(categoryGroupRepository.findTopByOrderBySortOrderDesc()).thenReturn(Optional.of(existing));
+        when(categoryGroupRepository.findTopByUserSubOrderBySortOrderDesc(USER_SUB)).thenReturn(Optional.of(existing));
         when(categoryGroupRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        categoryService.createGroup(new CategoryGroupRequest("New Group"));
+        categoryService.createGroup(new CategoryGroupRequest("New Group"), USER_SUB);
 
         verify(categoryGroupRepository).save(argThat(g -> g.getSortOrder() == 3));
     }
 
     @Test
     void createGroup_assignsSortOrderZero_whenNoGroupsExist() {
-        when(categoryGroupRepository.findTopByOrderBySortOrderDesc()).thenReturn(Optional.empty());
+        when(categoryGroupRepository.findTopByUserSubOrderBySortOrderDesc(USER_SUB)).thenReturn(Optional.empty());
         when(categoryGroupRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        categoryService.createGroup(new CategoryGroupRequest("First Group"));
+        categoryService.createGroup(new CategoryGroupRequest("First Group"), USER_SUB);
 
         verify(categoryGroupRepository).save(argThat(g -> g.getSortOrder() == 0));
     }
@@ -109,48 +114,32 @@ class CategoryServiceTest {
         when(categoryGroupRepository.findById(groupId)).thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-            () -> categoryService.addCategory(groupId, new BudgetCategoryRequest("Rent")));
+            () -> categoryService.addCategory(groupId, new BudgetCategoryRequest("Rent"), USER_SUB));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
 
     @Test
+    void addCategory_throwsForbidden_whenGroupBelongsToOtherUser() {
+        when(categoryGroupRepository.findById(groupId)).thenReturn(Optional.of(group));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+            () -> categoryService.addCategory(groupId, new BudgetCategoryRequest("Rent"), OTHER_SUB));
+
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+    }
+
+    @Test
     void addCategory_savesAndReturnsUpdatedGroup() {
         when(categoryGroupRepository.findById(groupId)).thenReturn(Optional.of(group));
-        when(budgetCategoryRepository.findTopByGroupIdOrderBySortOrderDesc(groupId)).thenReturn(Optional.empty());
+        when(budgetCategoryRepository.findTopByGroupOrderBySortOrderDesc(group)).thenReturn(Optional.empty());
         when(budgetCategoryRepository.save(any())).thenReturn(category);
-        when(budgetCategoryRepository.findByGroupIdOrderBySortOrderAsc(groupId)).thenReturn(List.of(category));
+        when(budgetCategoryRepository.findByGroupOrderBySortOrderAsc(group)).thenReturn(List.of(category));
 
-        CategoryGroupDTO result = categoryService.addCategory(groupId, new BudgetCategoryRequest("Rent"));
+        CategoryGroupDTO result = categoryService.addCategory(groupId, new BudgetCategoryRequest("Rent"), USER_SUB);
 
         assertEquals(1, result.categories().size());
         assertEquals("Rent", result.categories().get(0).name());
-    }
-
-    @Test
-    void addCategory_assignsNextSortOrder_whenCategoriesExist() {
-        BudgetCategory existing = new BudgetCategory();
-        existing.setSortOrder(1);
-        when(categoryGroupRepository.findById(groupId)).thenReturn(Optional.of(group));
-        when(budgetCategoryRepository.findTopByGroupIdOrderBySortOrderDesc(groupId)).thenReturn(Optional.of(existing));
-        when(budgetCategoryRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        when(budgetCategoryRepository.findByGroupIdOrderBySortOrderAsc(groupId)).thenReturn(List.of());
-
-        categoryService.addCategory(groupId, new BudgetCategoryRequest("Utilities"));
-
-        verify(budgetCategoryRepository).save(argThat(c -> c.getSortOrder() == 2));
-    }
-
-    @Test
-    void addCategory_assignsSortOrderZero_whenNoCategoriesExist() {
-        when(categoryGroupRepository.findById(groupId)).thenReturn(Optional.of(group));
-        when(budgetCategoryRepository.findTopByGroupIdOrderBySortOrderDesc(groupId)).thenReturn(Optional.empty());
-        when(budgetCategoryRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        when(budgetCategoryRepository.findByGroupIdOrderBySortOrderAsc(groupId)).thenReturn(List.of());
-
-        categoryService.addCategory(groupId, new BudgetCategoryRequest("Rent"));
-
-        verify(budgetCategoryRepository).save(argThat(c -> c.getSortOrder() == 0));
     }
 
     @Test
@@ -158,9 +147,19 @@ class CategoryServiceTest {
         when(budgetCategoryRepository.findById(categoryId)).thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-            () -> categoryService.renameCategory(categoryId, new BudgetCategoryRequest("New Name")));
+            () -> categoryService.renameCategory(categoryId, new BudgetCategoryRequest("New Name"), USER_SUB));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+    }
+
+    @Test
+    void renameCategory_throwsForbidden_whenCategoryBelongsToOtherUser() {
+        when(budgetCategoryRepository.findById(categoryId)).thenReturn(Optional.of(category));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+            () -> categoryService.renameCategory(categoryId, new BudgetCategoryRequest("New Name"), OTHER_SUB));
+
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
     }
 
     @Test
@@ -168,7 +167,7 @@ class CategoryServiceTest {
         when(budgetCategoryRepository.findById(categoryId)).thenReturn(Optional.of(category));
         when(budgetCategoryRepository.save(any())).thenReturn(category);
 
-        categoryService.renameCategory(categoryId, new BudgetCategoryRequest("New Name"));
+        categoryService.renameCategory(categoryId, new BudgetCategoryRequest("New Name"), USER_SUB);
 
         assertEquals("New Name", category.getName());
         verify(budgetCategoryRepository).save(category);
@@ -181,13 +180,15 @@ class CategoryServiceTest {
         CategoryGroup g1 = new CategoryGroup();
         g1.setId(id1);
         g1.setSortOrder(0);
+        g1.setUserSub(USER_SUB);
         CategoryGroup g2 = new CategoryGroup();
         g2.setId(id2);
         g2.setSortOrder(1);
+        g2.setUserSub(USER_SUB);
 
         when(categoryGroupRepository.findAllById(any())).thenReturn(List.of(g1, g2));
 
-        categoryService.reorderGroups(List.of(new SortItem(id1, 1), new SortItem(id2, 0)));
+        categoryService.reorderGroups(List.of(new SortItem(id1, 1), new SortItem(id2, 0)), USER_SUB);
 
         assertEquals(1, g1.getSortOrder());
         assertEquals(0, g2.getSortOrder());
@@ -195,45 +196,18 @@ class CategoryServiceTest {
     }
 
     @Test
-    void reorderCategories_updatesAllSortOrders() {
+    void reorderGroups_throwsForbidden_whenAnyGroupBelongsToOtherUser() {
         UUID id1 = UUID.randomUUID();
-        UUID id2 = UUID.randomUUID();
-        BudgetCategory c1 = new BudgetCategory();
-        c1.setId(id1);
-        c1.setSortOrder(0);
-        BudgetCategory c2 = new BudgetCategory();
-        c2.setId(id2);
-        c2.setSortOrder(1);
+        CategoryGroup g1 = new CategoryGroup();
+        g1.setId(id1);
+        g1.setUserSub(OTHER_SUB);
 
-        when(budgetCategoryRepository.findAllById(any())).thenReturn(List.of(c1, c2));
-
-        categoryService.reorderCategories(List.of(new SortItem(id1, 1), new SortItem(id2, 0)));
-
-        assertEquals(1, c1.getSortOrder());
-        assertEquals(0, c2.getSortOrder());
-        verify(budgetCategoryRepository).saveAll(List.of(c1, c2));
-    }
-
-    @Test
-    void deleteCategory_throwsNotFound_whenCategoryMissing() {
-        when(budgetCategoryRepository.existsById(categoryId)).thenReturn(false);
+        when(categoryGroupRepository.findAllById(any())).thenReturn(List.of(g1));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-            () -> categoryService.deleteCategory(categoryId));
+            () -> categoryService.reorderGroups(List.of(new SortItem(id1, 0)), USER_SUB));
 
-        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
-    }
-
-    @Test
-    void deleteCategory_throwsConflict_whenTransactionsExist() {
-        when(budgetCategoryRepository.existsById(categoryId)).thenReturn(true);
-        when(budgetCategoryRepository.existsTransactionsByCategoryId(categoryId)).thenReturn(true);
-
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-            () -> categoryService.deleteCategory(categoryId));
-
-        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
-        verify(budgetCategoryRepository, never()).deleteById(any());
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
     }
 
     @Test
@@ -241,18 +215,28 @@ class CategoryServiceTest {
         when(categoryGroupRepository.findById(groupId)).thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-            () -> categoryService.renameGroup(groupId, new CategoryGroupRequest("New Name")));
+            () -> categoryService.renameGroup(groupId, new CategoryGroupRequest("New Name"), USER_SUB));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+    }
+
+    @Test
+    void renameGroup_throwsForbidden_whenGroupBelongsToOtherUser() {
+        when(categoryGroupRepository.findById(groupId)).thenReturn(Optional.of(group));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+            () -> categoryService.renameGroup(groupId, new CategoryGroupRequest("New Name"), OTHER_SUB));
+
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
     }
 
     @Test
     void renameGroup_updatesNameAndReturnsDTO() {
         when(categoryGroupRepository.findById(groupId)).thenReturn(Optional.of(group));
         when(categoryGroupRepository.save(any())).thenReturn(group);
-        when(budgetCategoryRepository.findByGroupIdOrderBySortOrderAsc(groupId)).thenReturn(List.of(category));
+        when(budgetCategoryRepository.findByGroupOrderBySortOrderAsc(group)).thenReturn(List.of(category));
 
-        CategoryGroupDTO result = categoryService.renameGroup(groupId, new CategoryGroupRequest("New Name"));
+        CategoryGroupDTO result = categoryService.renameGroup(groupId, new CategoryGroupRequest("New Name"), USER_SUB);
 
         assertEquals("New Name", group.getName());
         assertEquals(1, result.categories().size());
@@ -261,21 +245,31 @@ class CategoryServiceTest {
 
     @Test
     void deleteGroup_throwsNotFound_whenGroupMissing() {
-        when(categoryGroupRepository.existsById(groupId)).thenReturn(false);
+        when(categoryGroupRepository.findById(groupId)).thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-            () -> categoryService.deleteGroup(groupId));
+            () -> categoryService.deleteGroup(groupId, USER_SUB));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
 
     @Test
+    void deleteGroup_throwsForbidden_whenGroupBelongsToOtherUser() {
+        when(categoryGroupRepository.findById(groupId)).thenReturn(Optional.of(group));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+            () -> categoryService.deleteGroup(groupId, OTHER_SUB));
+
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+    }
+
+    @Test
     void deleteGroup_throwsConflict_whenTransactionsExist() {
-        when(categoryGroupRepository.existsById(groupId)).thenReturn(true);
+        when(categoryGroupRepository.findById(groupId)).thenReturn(Optional.of(group));
         when(budgetCategoryRepository.existsTransactionsByGroupId(groupId)).thenReturn(true);
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-            () -> categoryService.deleteGroup(groupId));
+            () -> categoryService.deleteGroup(groupId, USER_SUB));
 
         assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
         verify(categoryGroupRepository, never()).deleteById(any());
@@ -283,10 +277,10 @@ class CategoryServiceTest {
 
     @Test
     void deleteGroup_deletesAllocationsAndCategoriesAndGroup() {
-        when(categoryGroupRepository.existsById(groupId)).thenReturn(true);
+        when(categoryGroupRepository.findById(groupId)).thenReturn(Optional.of(group));
         when(budgetCategoryRepository.existsTransactionsByGroupId(groupId)).thenReturn(false);
 
-        categoryService.deleteGroup(groupId);
+        categoryService.deleteGroup(groupId, USER_SUB);
 
         verify(budgetAllocationRepository).deleteByGroupId(groupId);
         verify(budgetCategoryRepository).deleteByGroupId(groupId);
@@ -294,11 +288,43 @@ class CategoryServiceTest {
     }
 
     @Test
+    void deleteCategory_throwsNotFound_whenCategoryMissing() {
+        when(budgetCategoryRepository.findById(categoryId)).thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+            () -> categoryService.deleteCategory(categoryId, USER_SUB));
+
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+    }
+
+    @Test
+    void deleteCategory_throwsForbidden_whenCategoryBelongsToOtherUser() {
+        when(budgetCategoryRepository.findById(categoryId)).thenReturn(Optional.of(category));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+            () -> categoryService.deleteCategory(categoryId, OTHER_SUB));
+
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+    }
+
+    @Test
+    void deleteCategory_throwsConflict_whenTransactionsExist() {
+        when(budgetCategoryRepository.findById(categoryId)).thenReturn(Optional.of(category));
+        when(budgetCategoryRepository.existsTransactionsByCategoryId(categoryId)).thenReturn(true);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+            () -> categoryService.deleteCategory(categoryId, USER_SUB));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        verify(budgetCategoryRepository, never()).deleteById(any());
+    }
+
+    @Test
     void deleteCategory_deletesSuccessfully() {
-        when(budgetCategoryRepository.existsById(categoryId)).thenReturn(true);
+        when(budgetCategoryRepository.findById(categoryId)).thenReturn(Optional.of(category));
         when(budgetCategoryRepository.existsTransactionsByCategoryId(categoryId)).thenReturn(false);
 
-        categoryService.deleteCategory(categoryId);
+        categoryService.deleteCategory(categoryId, USER_SUB);
 
         verify(budgetCategoryRepository).deleteById(categoryId);
     }

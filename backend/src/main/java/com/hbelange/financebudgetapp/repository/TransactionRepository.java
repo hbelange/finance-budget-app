@@ -35,23 +35,28 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
         return findByAccountIdBetween(accountId, month.atDay(1), month.atEndOfMonth(), pageable);
     }
 
-    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.date <= :lastDayOfMonth")
-    BigDecimal sumNetUpToDate(@Param("lastDayOfMonth") LocalDate lastDayOfMonth);
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.date <= :lastDayOfMonth AND t.account.userSub = :userSub")
+    BigDecimal sumNetUpToDate(@Param("lastDayOfMonth") LocalDate lastDayOfMonth, @Param("userSub") String userSub);
 
-    @Query("SELECT NEW com.hbelange.financebudgetapp.dto.CategorySpent(t.categoryId, COALESCE(SUM(t.amount), 0)) FROM Transaction t WHERE t.categoryId IS NOT NULL AND t.date BETWEEN :start AND :end GROUP BY t.categoryId")
-    List<CategorySpent> findSpentByCategoryForMonth(@Param("start") LocalDate start, @Param("end") LocalDate end);
+    @Query("SELECT NEW com.hbelange.financebudgetapp.dto.CategorySpent(t.categoryId, COALESCE(SUM(t.amount), 0)) FROM Transaction t WHERE t.categoryId IS NOT NULL AND t.date BETWEEN :start AND :end AND t.account.userSub = :userSub GROUP BY t.categoryId")
+    List<CategorySpent> findSpentByCategoryForMonth(@Param("start") LocalDate start, @Param("end") LocalDate end, @Param("userSub") String userSub);
 
-    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t")
-    BigDecimal sumNetWorth();
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.account.userSub = :userSub")
+    BigDecimal sumNetWorth(@Param("userSub") String userSub);
 
-    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.amount > 0 AND t.date BETWEEN :start AND :end")
-    BigDecimal sumIncomeForMonth(@Param("start") LocalDate start, @Param("end") LocalDate end);
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.amount > 0 AND t.date BETWEEN :start AND :end AND t.account.userSub = :userSub")
+    BigDecimal sumIncomeForMonth(@Param("start") LocalDate start, @Param("end") LocalDate end, @Param("userSub") String userSub);
 
-    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.amount < 0 AND t.date BETWEEN :start AND :end")
-    BigDecimal sumSpentForMonth(@Param("start") LocalDate start, @Param("end") LocalDate end);
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.amount < 0 AND t.date BETWEEN :start AND :end AND t.account.userSub = :userSub")
+    BigDecimal sumSpentForMonth(@Param("start") LocalDate start, @Param("end") LocalDate end, @Param("userSub") String userSub);
 
-    @Query("SELECT NEW com.hbelange.financebudgetapp.dto.CategorySpent(t.categoryId, COALESCE(SUM(t.amount), 0)) FROM Transaction t WHERE t.categoryId IS NOT NULL AND t.amount < 0 AND t.date BETWEEN :start AND :end GROUP BY t.categoryId")
-    List<CategorySpent> findExpenseByCategoryForMonth(@Param("start") LocalDate start, @Param("end") LocalDate end);
+    @Query("SELECT NEW com.hbelange.financebudgetapp.dto.CategorySpent(t.categoryId, COALESCE(SUM(t.amount), 0)) FROM Transaction t WHERE t.categoryId IS NOT NULL AND t.amount < 0 AND t.date BETWEEN :start AND :end AND t.account.userSub = :userSub GROUP BY t.categoryId")
+    List<CategorySpent> findExpenseByCategoryForMonth(@Param("start") LocalDate start, @Param("end") LocalDate end, @Param("userSub") String userSub);
+
+    Page<Transaction> findByAccountUserSub(String userSub, Pageable pageable);
+
+    @Query("SELECT t FROM Transaction t WHERE t.account.userSub = :userSub AND t.date BETWEEN :start AND :end")
+    Page<Transaction> findByUserSubAndDateBetween(@Param("userSub") String userSub, @Param("start") LocalDate start, @Param("end") LocalDate end, Pageable pageable);
 
     /** Returns null when the table is empty — expected behavior for an aggregate with no rows. */
     @Query("SELECT MIN(t.date) FROM Transaction t")

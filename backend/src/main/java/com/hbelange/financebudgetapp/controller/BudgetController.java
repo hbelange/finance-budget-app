@@ -2,6 +2,8 @@ package com.hbelange.financebudgetapp.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -28,13 +30,13 @@ public class BudgetController {
     }
 
     @GetMapping
-    public BudgetViewDTO getBudget(@RequestParam String month) {
-        return budgetService.getBudget(month);
+    public BudgetViewDTO getBudget(@RequestParam String month, @AuthenticationPrincipal Jwt jwt) {
+        return budgetService.getBudget(month, jwt.getSubject());
     }
 
     @PutMapping("/allocations")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void upsertAllocation(@Valid @RequestBody AllocationRequest req) {
-        budgetService.upsertAllocation(req);
+    public void upsertAllocation(@Valid @RequestBody AllocationRequest req, @AuthenticationPrincipal Jwt jwt) {
+        budgetService.upsertAllocation(req, jwt.getSubject());
     }
 }
