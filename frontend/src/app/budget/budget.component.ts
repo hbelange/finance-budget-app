@@ -14,7 +14,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { BudgetStateService } from '../core/services/budget-state.service';
 import { AllocationRequest, BudgetCategory, BudgetGroup, BudgetService, BudgetView } from '../core/services/budget.service';
-import { CategoryService } from '../core/services/category.service';
+import { CategoryGroup, CategoryService } from '../core/services/category.service';
 import { ConfirmDialogComponent } from '../accounts/confirm-dialog.component';
 import { NameDialogComponent } from '../shared/name-dialog.component';
 import { timer } from 'rxjs';
@@ -160,7 +160,7 @@ export default class BudgetComponent {
       .subscribe((name: string | undefined) => {
         if (!name) return;
         this.categoryService.createGroup(name).subscribe({
-          next: () => this.loadBudget(this.month()),
+          next: (categoryGroup) => this.budgetView.update(v => !v ? v : { ...v, groups: [...v.groups, { id: categoryGroup.id, name: categoryGroup.name, categories: [] }] }),
           error: () => this.snackBar.open('Failed to create group.', 'OK', { duration: 5000 }),
         });
       });
@@ -171,9 +171,18 @@ export default class BudgetComponent {
       .afterClosed()
       .subscribe((name: string | undefined) => {
         if (!name) return;
+        this.budgetView.update(v => !v ? v : {
+            ...v,
+            groups: v.groups.map(g => g.id === group.id ? { ...g, name } : g),
+          });
         this.categoryService.renameGroup(group.id, name).subscribe({
-          next: () => this.loadBudget(this.month()),
-          error: () => this.snackBar.open('Failed to rename group.', 'OK', { duration: 5000 }),
+          error: () => {
+            this.budgetView.update(v => !v ? v : {
+              ...v,
+              groups: v.groups.map(g => g.id === group.id ? { ...g, name: group.name } : g),
+            });
+            this.snackBar.open('Failed to rename group.', 'OK', { duration: 5000 });
+          }
         });
       });
   }
@@ -183,9 +192,17 @@ export default class BudgetComponent {
       data: { message: `Delete "${group.name}" and all its categories? This cannot be undone.` },
     }).afterClosed().subscribe((confirmed: boolean | undefined) => {
       if (!confirmed) return;
+      const originalIndex = this.budgetView()?.groups.findIndex(g => g.id === group.id);
+      this.budgetView.update(v => !v ? v : {
+          ...v,
+          groups: v.groups.filter(g => g.id !== group.id),
+        });
       this.categoryService.deleteGroup(group.id).subscribe({
-        next: () => this.loadBudget(this.month()),
         error: (err: HttpErrorResponse) => {
+          this.budgetView.update(v => !v ? v : {
+            ...v,
+            groups: [...v.groups.slice(0, originalIndex!), group, ...v.groups.slice(originalIndex!)]
+          });
           const msg = err.status === 409
             ? 'Remove all transactions from this group\'s categories before deleting.'
             : 'Failed to delete group.';
@@ -201,7 +218,10 @@ export default class BudgetComponent {
       .subscribe((name: string | undefined) => {
         if (!name) return;
         this.categoryService.addCategory(group.id, name).subscribe({
-          next: () => this.loadBudget(this.month()),
+          next: (categoryGroup) => this.budgetView.update(v => !v ? v : {
+            ...v,
+            groups: v.groups.map(g => g.id === group.id ? { ...g, categories : [...g.categories, {...categoryGroup.categories.slice(-1)[0], assigned: 0, spent: 0, available: 0 } ] } : g)
+          }),
           error: () => this.snackBar.open('Failed to create category.', 'OK', { duration: 5000 }),
         });
       });
@@ -212,9 +232,24 @@ export default class BudgetComponent {
       .afterClosed()
       .subscribe((name: string | undefined) => {
         if (!name) return;
+        this.budgetView.update(v => !v ? v : {
+            ...v,
+            groups: v.groups.map(g => ({
+              ...g,
+              categories: g.categories.map(c => c.id === cat.id ? { ...c, name } : c),
+            })),
+          });
         this.categoryService.renameCategory(cat.id, name).subscribe({
-          next: () => this.loadBudget(this.month()),
-          error: () => this.snackBar.open('Failed to rename category.', 'OK', { duration: 5000 }),
+          error: () => {
+            this.budgetView.update(v => !v ? v : {
+              ...v,
+              groups: v.groups.map(g => ({
+                ...g,
+                categories: g.categories.map(c => c.id === cat.id ? { ...c, name: cat.name } : c),
+              })),
+            });
+            this.snackBar.open('Failed to rename category.', 'OK', { duration: 5000 });
+          }
         });
       });
   }
@@ -224,9 +259,27 @@ export default class BudgetComponent {
       data: { message: `Delete "${cat.name}"? This cannot be undone.` },
     }).afterClosed().subscribe((confirmed: boolean | undefined) => {
       if (!confirmed) return;
+      const originalGroup = this.budgetView()?.groups.find(g => g.categories.some(c => c.id === cat.id));
+      const originalIndex = originalGroup?.categories.findIndex(c => c.id === cat.id);
+    
+      this.budgetView.update(v => !v ? v : {
+          ...v,
+          groups: v.groups.map(g => ({
+            ...g,
+            categories: g.categories.filter(c => c.id !== cat.id),
+          })),
+        });
       this.categoryService.deleteCategory(cat.id).subscribe({
-        next: () => this.loadBudget(this.month()),
         error: (err: HttpErrorResponse) => {
+          this.budgetView.update(v => !v ? v : {
+            ...v,
+            groups: v.groups.map(g => {
+              if (g.id !== originalGroup?.id) return g;
+              const restored = [...g.categories];
+              restored.splice(originalIndex!, 0, cat);
+              return { ...g, categories: restored };
+            })
+          });
           const msg = err.status === 409
             ? 'Remove all transactions from this category before deleting.'
             : 'Failed to delete category.';
