@@ -25,9 +25,9 @@ public class AccountService {
         this.accountRepository = accountRepository;
     }
 
-    public List<AccountDTO> findAll() {
-        List<AccountBalance> balances = accountRepository.findAllBalances();
-        return accountRepository.findAll()
+    public List<AccountDTO> findAll(String userSub) {
+        List<AccountBalance> balances = accountRepository.findBalancesByUserSub(userSub);
+        return accountRepository.findByUserSub(userSub)
             .stream()
             .map(a -> {
                 BigDecimal balance = balances.stream()
@@ -40,25 +40,34 @@ public class AccountService {
             .toList();
     }
 
-    public AccountDTO create(AccountRequest req) {
+    public AccountDTO create(AccountRequest req, String userSub) {
         Account account = new Account();
         account.setName(req.name());
         account.setType(req.type());
+        account.setUserSub(userSub);
         return toDTO(accountRepository.save(account), BigDecimal.ZERO);
     }
 
-    public AccountDTO update(UUID id, AccountRequest req) {
+    public AccountDTO update(UUID id, AccountRequest req, String userSub) {
         Account account = accountRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found"));
+
+        if (!account.getUserSub().equals(userSub)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have permission to update this account");
+        }
         account.setName(req.name());
         account.setType(req.type());
         return toDTO(accountRepository.save(account), accountRepository.findBalanceById(id));
     }
 
-    public void delete(UUID id) {
-        if (!accountRepository.existsById(id)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+    public void delete(UUID id, String userSub) {
+        Account account = accountRepository.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found"));
+
+        if (!account.getUserSub().equals(userSub)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have permission to delete this account");
         }
+
         if (accountRepository.existsTransactionsByAccountId(id)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Account has existing transactions");
         }

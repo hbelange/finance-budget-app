@@ -11,6 +11,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -32,7 +34,7 @@ import jakarta.validation.Valid;
 @RestController
 @RequestMapping("/api/transactions")
 public class TransactionController {
-    
+
     private final TransactionService transactionService;
 
     @Autowired
@@ -42,28 +44,29 @@ public class TransactionController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public TransactionDTO createTransaction(@RequestBody @Valid TransactionRequest req) {
-        return transactionService.create(req);
+    public TransactionDTO createTransaction(@RequestBody @Valid TransactionRequest req, @AuthenticationPrincipal Jwt jwt) {
+        return transactionService.create(req, jwt.getSubject());
     }
 
     @PutMapping("/{id}")
-    public TransactionDTO updateTransaction(@PathVariable UUID id, @RequestBody @Valid TransactionRequest req) {
-        return transactionService.update(id, req);
+    public TransactionDTO updateTransaction(@PathVariable UUID id, @RequestBody @Valid TransactionRequest req, @AuthenticationPrincipal Jwt jwt) {
+        return transactionService.update(id, req, jwt.getSubject());
     }
 
     @GetMapping
     public Page<TransactionDTO> getTransactions(
         @RequestParam(required = false) UUID accountId,
         @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM") YearMonth month,
-        @ParameterObject @PageableDefault(size = 50, sort = "date", direction = Sort.Direction.DESC) Pageable pageable
+        @ParameterObject @PageableDefault(size = 50, sort = "date", direction = Sort.Direction.DESC) Pageable pageable,
+        @AuthenticationPrincipal Jwt jwt
     ) {
-        return transactionService.findAll(accountId, month, pageable);
+        return transactionService.findAll(accountId, month, jwt.getSubject(), pageable);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteTransaction(@PathVariable UUID id) {
-        transactionService.delete(id);
+    public void deleteTransaction(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
+        transactionService.delete(id, jwt.getSubject());
     }
 
     @GetMapping("/date-bounds")

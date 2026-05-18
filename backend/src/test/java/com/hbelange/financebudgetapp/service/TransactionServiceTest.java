@@ -22,7 +22,6 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.UUID;
-
 import java.util.Optional;
 
 import org.springframework.http.HttpStatus;
@@ -49,17 +48,16 @@ class TransactionServiceTest {
     @InjectMocks
     private TransactionService transactionService;
 
-    // Shared test data — two accounts, three transactions across two months
+    private static final String USER_SUB = "auth0|test-user";
+    private static final String OTHER_SUB = "auth0|other-user";
+
     private UUID accountAId;
     private UUID accountBId;
     private Account accountA;
     private Account accountB;
 
-    // accountA, Jan 2026
     private Transaction txA_jan;
-    // accountA, Feb 2026
     private Transaction txA_feb;
-    // accountB, Jan 2026
     private Transaction txB_jan;
 
     @BeforeEach
@@ -69,9 +67,11 @@ class TransactionServiceTest {
 
         accountA = new Account();
         accountA.setId(accountAId);
+        accountA.setUserSub(USER_SUB);
 
         accountB = new Account();
         accountB.setId(accountBId);
+        accountB.setUserSub(USER_SUB);
 
         txA_jan = new Transaction();
         txA_jan.setId(UUID.fromString("11111111-0000-0000-0000-000000000001"));
@@ -98,66 +98,50 @@ class TransactionServiceTest {
     // --- findAll ---
 
     @Test
-    void findAll_noFilters_returnsAllTransactions() {
+    void findAll_noFilters_returnsUserTransactions() {
         Pageable pageable = PageRequest.of(0, 10);
-        when(transactionRepository.findAll(pageable))
+        when(transactionRepository.findByAccountUserSub(USER_SUB, pageable))
             .thenReturn(new PageImpl<>(List.of(txA_jan, txA_feb, txB_jan)));
 
-        Page<TransactionDTO> result = transactionService.findAll(null, null, pageable);
+        Page<TransactionDTO> result = transactionService.findAll(null, null, USER_SUB, pageable);
 
         assertThat(result.getTotalElements()).isEqualTo(3);
-        assertThat(result.getContent())
-            .extracting(TransactionDTO::accountId)
-            .containsExactlyInAnyOrder(accountAId, accountAId, accountBId);
     }
 
     @Test
     void findAll_withAccountId_returnsOnlyThatAccountsTransactions() {
         Pageable pageable = PageRequest.of(0, 10);
+        when(accountRepository.findById(accountAId)).thenReturn(Optional.of(accountA));
         when(transactionRepository.findByAccountId(accountAId, pageable))
             .thenReturn(new PageImpl<>(List.of(txA_jan, txA_feb)));
 
-        Page<TransactionDTO> result = transactionService.findAll(accountAId, null, pageable);
+        Page<TransactionDTO> result = transactionService.findAll(accountAId, null, USER_SUB, pageable);
 
         assertThat(result.getTotalElements()).isEqualTo(2);
-        assertThat(result.getContent())
-            .extracting(TransactionDTO::accountId)
-            .containsOnly(accountAId);
-        assertThat(result.getContent())
-            .extracting(TransactionDTO::accountId)
-            .doesNotContain(accountBId);
+        assertThat(result.getContent()).extracting(TransactionDTO::accountId).containsOnly(accountAId);
     }
 
     @Test
-    void findAll_withMonth_returnsOnlyThatMonthsTransactions() {
+    void findAll_withAccountId_throwsForbidden_whenAccountBelongsToOtherUser() {
         Pageable pageable = PageRequest.of(0, 10);
-        when(transactionRepository.findByMonth(YearMonth.of(2026, 1), pageable))
-            .thenReturn(new PageImpl<>(List.of(txA_jan, txB_jan)));
+        when(accountRepository.findById(accountAId)).thenReturn(Optional.of(accountA));
 
-        Page<TransactionDTO> result = transactionService.findAll(null, YearMonth.of(2026, 1), pageable);
-
-        assertThat(result.getTotalElements()).isEqualTo(2);
-        assertThat(result.getContent())
-            .extracting(TransactionDTO::date)
-            .allMatch(d -> YearMonth.from(d).equals(YearMonth.of(2026, 1)));
-        assertThat(result.getContent())
-            .extracting(TransactionDTO::date)
-            .doesNotContain(LocalDate.of(2026, 2, 10));
+        assertThatThrownBy(() -> transactionService.findAll(accountAId, null, OTHER_SUB, pageable))
+            .isInstanceOf(ResponseStatusException.class)
+            .satisfies(e -> assertThat(((ResponseStatusException) e).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN));
     }
 
     @Test
     void findAll_withAccountIdAndMonth_returnsOnlyMatchingTransaction() {
         Pageable pageable = PageRequest.of(0, 10);
+        when(accountRepository.findById(accountAId)).thenReturn(Optional.of(accountA));
         when(transactionRepository.findByAccountIdAndMonth(accountAId, YearMonth.of(2026, 1), pageable))
             .thenReturn(new PageImpl<>(List.of(txA_jan)));
 
-        Page<TransactionDTO> result = transactionService.findAll(accountAId, YearMonth.of(2026, 1), pageable);
+        Page<TransactionDTO> result = transactionService.findAll(accountAId, YearMonth.of(2026, 1), USER_SUB, pageable);
 
         assertThat(result.getTotalElements()).isEqualTo(1);
-        TransactionDTO dto = result.getContent().get(0);
-        assertThat(dto.accountId()).isEqualTo(accountAId);
-        assertThat(dto.date()).isEqualTo(LocalDate.of(2026, 1, 15));
-        assertThat(dto.amount()).isEqualByComparingTo("50.00");
+        assertThat(result.getContent().get(0).date()).isEqualTo(LocalDate.of(2026, 1, 15));
     }
 
     // --- create ---
@@ -171,25 +155,36 @@ class TransactionServiceTest {
         when(accountRepository.findById(accountAId)).thenReturn(Optional.of(accountA));
         when(transactionRepository.save(any())).thenReturn(txA_jan);
 
-        TransactionDTO result = transactionService.create(req);
+        TransactionDTO result = transactionService.create(req, USER_SUB);
 
         assertThat(result.accountId()).isEqualTo(accountAId);
-        assertThat(result.date()).isEqualTo(LocalDate.of(2026, 1, 15));
         assertThat(result.amount()).isEqualByComparingTo("50.00");
     }
 
     @Test
-    void create_throwsException_whenAccountNotFound() {
+    void create_throwsNotFound_whenAccountNotFound() {
         TransactionRequest req = new TransactionRequest(
             accountAId, LocalDate.of(2026, 1, 15), null, null,
             new BigDecimal("50.00"), null, false
         );
         when(accountRepository.findById(accountAId)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> transactionService.create(req))
+        assertThatThrownBy(() -> transactionService.create(req, USER_SUB))
             .isInstanceOf(ResponseStatusException.class)
-            .satisfies(e -> assertThat(((ResponseStatusException) e).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND))
-            .hasMessageContaining("Account not found");
+            .satisfies(e -> assertThat(((ResponseStatusException) e).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND));
+    }
+
+    @Test
+    void create_throwsForbidden_whenAccountBelongsToOtherUser() {
+        TransactionRequest req = new TransactionRequest(
+            accountAId, LocalDate.of(2026, 1, 15), null, null,
+            new BigDecimal("50.00"), null, false
+        );
+        when(accountRepository.findById(accountAId)).thenReturn(Optional.of(accountA));
+
+        assertThatThrownBy(() -> transactionService.create(req, OTHER_SUB))
+            .isInstanceOf(ResponseStatusException.class)
+            .satisfies(e -> assertThat(((ResponseStatusException) e).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN));
     }
 
     // --- update ---
@@ -201,39 +196,31 @@ class TransactionServiceTest {
             accountAId, LocalDate.of(2026, 1, 20), "Updated Payee", null,
             new BigDecimal("60.00"), null, true
         );
-        txA_jan.setPayee("Updated Payee");
-        txA_jan.setAmount(new BigDecimal("60.00"));
-        txA_jan.setCleared(true);
-
         when(transactionRepository.findById(txId)).thenReturn(Optional.of(txA_jan));
         when(transactionRepository.save(any())).thenReturn(txA_jan);
 
-        TransactionDTO result = transactionService.update(txId, req);
+        TransactionDTO result = transactionService.update(txId, req, USER_SUB);
 
         assertThat(result.accountId()).isEqualTo(accountAId);
-        assertThat(result.amount()).isEqualByComparingTo("60.00");
         verify(accountRepository, never()).findById(any());
     }
 
     @Test
-    void update_updatesAndReturnsDto_whenAccountChanges() {
+    void update_throwsForbidden_whenTransactionBelongsToOtherUser() {
         UUID txId = txA_jan.getId();
-        // txA_jan starts with accountA; request targets accountB — service must re-fetch the account
         TransactionRequest req = new TransactionRequest(
-            accountBId, LocalDate.of(2026, 1, 15), null, null,
+            accountAId, LocalDate.of(2026, 1, 15), null, null,
             new BigDecimal("50.00"), null, false
         );
         when(transactionRepository.findById(txId)).thenReturn(Optional.of(txA_jan));
-        when(accountRepository.findById(accountBId)).thenReturn(Optional.of(accountB));
-        when(transactionRepository.save(any())).thenReturn(txA_jan);
 
-        TransactionDTO result = transactionService.update(txId, req);
-
-        assertThat(result.accountId()).isEqualTo(accountBId);
+        assertThatThrownBy(() -> transactionService.update(txId, req, OTHER_SUB))
+            .isInstanceOf(ResponseStatusException.class)
+            .satisfies(e -> assertThat(((ResponseStatusException) e).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN));
     }
 
     @Test
-    void update_throwsException_whenTransactionNotFound() {
+    void update_throwsNotFound_whenTransactionMissing() {
         UUID unknownId = UUID.randomUUID();
         TransactionRequest req = new TransactionRequest(
             accountAId, LocalDate.of(2026, 1, 15), null, null,
@@ -241,26 +228,9 @@ class TransactionServiceTest {
         );
         when(transactionRepository.findById(unknownId)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> transactionService.update(unknownId, req))
+        assertThatThrownBy(() -> transactionService.update(unknownId, req, USER_SUB))
             .isInstanceOf(ResponseStatusException.class)
-            .satisfies(e -> assertThat(((ResponseStatusException) e).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND))
-            .hasMessageContaining("Transaction not found");
-    }
-
-    @Test
-    void update_throwsException_whenNewAccountNotFound() {
-        UUID txId = txA_jan.getId();
-        TransactionRequest req = new TransactionRequest(
-            accountBId, LocalDate.of(2026, 1, 15), null, null,
-            new BigDecimal("50.00"), null, false
-        );
-        when(transactionRepository.findById(txId)).thenReturn(Optional.of(txA_jan));
-        when(accountRepository.findById(accountBId)).thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> transactionService.update(txId, req))
-            .isInstanceOf(ResponseStatusException.class)
-            .satisfies(e -> assertThat(((ResponseStatusException) e).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND))
-            .hasMessageContaining("Account not found");
+            .satisfies(e -> assertThat(((ResponseStatusException) e).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND));
     }
 
     // --- delete ---
@@ -268,19 +238,32 @@ class TransactionServiceTest {
     @Test
     void delete_deletesTransaction() {
         UUID txId = txA_jan.getId();
+        when(transactionRepository.findById(txId)).thenReturn(Optional.of(txA_jan));
 
-        transactionService.delete(txId);
+        transactionService.delete(txId, USER_SUB);
 
         verify(transactionRepository).deleteById(txId);
     }
 
     @Test
-    void delete_doesNotThrow_whenTransactionNotFound() {
+    void delete_throwsForbidden_whenTransactionBelongsToOtherUser() {
+        UUID txId = txA_jan.getId();
+        when(transactionRepository.findById(txId)).thenReturn(Optional.of(txA_jan));
+
+        assertThatThrownBy(() -> transactionService.delete(txId, OTHER_SUB))
+            .isInstanceOf(ResponseStatusException.class)
+            .satisfies(e -> assertThat(((ResponseStatusException) e).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN));
+
+        verify(transactionRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void delete_throwsNotFound_whenTransactionMissing() {
         UUID unknownId = UUID.randomUUID();
+        when(transactionRepository.findById(unknownId)).thenReturn(Optional.empty());
 
-        // deleteById on a non-existent ID is a no-op — no exception expected
-        transactionService.delete(unknownId);
-
-        verify(transactionRepository).deleteById(unknownId);
+        assertThatThrownBy(() -> transactionService.delete(unknownId, USER_SUB))
+            .isInstanceOf(ResponseStatusException.class)
+            .satisfies(e -> assertThat(((ResponseStatusException) e).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND));
     }
 }

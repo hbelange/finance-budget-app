@@ -30,22 +30,30 @@ public class TransactionService {
         this.accountRepository = accountRepository;
     }
 
-    public Page<TransactionDTO> findAll(UUID accountId, YearMonth month, Pageable pageable) {
-        if (accountId != null && month != null) {
-            return transactionRepository.findByAccountIdAndMonth(accountId, month, pageable).map(this::toDTO);
-        }
+    public Page<TransactionDTO> findAll(UUID accountId, YearMonth month, String userSub, Pageable pageable) {
         if (accountId != null) {
+            Account account = accountRepository.findById(accountId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found"));
+            if (!account.getUserSub().equals(userSub)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            }
+            if (month != null) {
+                return transactionRepository.findByAccountIdAndMonth(accountId, month, pageable).map(this::toDTO);
+            }
             return transactionRepository.findByAccountId(accountId, pageable).map(this::toDTO);
         }
         if (month != null) {
-            return transactionRepository.findByMonth(month, pageable).map(this::toDTO);
+            return transactionRepository.findByUserSubAndDateBetween(userSub, month.atDay(1), month.atEndOfMonth(), pageable).map(this::toDTO);
         }
-        return transactionRepository.findAll(pageable).map(this::toDTO);
+        return transactionRepository.findByAccountUserSub(userSub, pageable).map(this::toDTO);
     }
 
-    public TransactionDTO create(TransactionRequest req) {
+    public TransactionDTO create(TransactionRequest req, String userSub) {
         Account account = accountRepository.findById(req.accountId())
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found: " + req.accountId()));
+        if (!account.getUserSub().equals(userSub)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
 
         Transaction transaction = new Transaction();
         transaction.setAccount(account);
@@ -59,13 +67,19 @@ public class TransactionService {
         return toDTO(transactionRepository.save(transaction));
     }
 
-    public TransactionDTO update(UUID id, TransactionRequest req) {
+    public TransactionDTO update(UUID id, TransactionRequest req, String userSub) {
         Transaction transaction = transactionRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Transaction not found: " + id));
+        if (!transaction.getAccount().getUserSub().equals(userSub)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
 
         if (!transaction.getAccount().getId().equals(req.accountId())) {
             Account account = accountRepository.findById(req.accountId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found: " + req.accountId()));
+            if (!account.getUserSub().equals(userSub)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            }
             transaction.setAccount(account);
         }
         transaction.setDate(req.date());
@@ -78,7 +92,12 @@ public class TransactionService {
         return toDTO(transactionRepository.save(transaction));
     }
 
-    public void delete(UUID id) {
+    public void delete(UUID id, String userSub) {
+        Transaction transaction = transactionRepository.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Transaction not found: " + id));
+        if (!transaction.getAccount().getUserSub().equals(userSub)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
         transactionRepository.deleteById(id);
     }
 

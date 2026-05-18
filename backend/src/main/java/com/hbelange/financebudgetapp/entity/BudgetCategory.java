@@ -3,10 +3,12 @@ package com.hbelange.financebudgetapp.entity;
 import java.util.UUID;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -23,8 +25,9 @@ public class BudgetCategory {
     @Column(columnDefinition = "uuid", updatable = false, nullable = false)
     private UUID id;
 
-    @Column(name = "group_id", nullable = false)
-    private UUID groupId;
+    @ManyToOne
+    @JoinColumn(name = "group_id", nullable = false)
+    private CategoryGroup group;
 
     @Column(nullable = false)
     private String name;

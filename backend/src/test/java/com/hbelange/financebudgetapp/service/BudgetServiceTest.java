@@ -7,6 +7,7 @@ import static org.mockito.Mockito.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -40,6 +41,9 @@ class BudgetServiceTest {
     @InjectMocks
     private BudgetService budgetService;
 
+    private static final String USER_SUB = "auth0|test-user";
+    private static final String OTHER_SUB = "auth0|other-user";
+
     private UUID groupId;
     private UUID categoryId;
     private CategoryGroup group;
@@ -54,36 +58,37 @@ class BudgetServiceTest {
         group.setId(groupId);
         group.setName("Housing");
         group.setSortOrder(1);
+        group.setUserSub(USER_SUB);
 
         category = new BudgetCategory();
         category.setId(categoryId);
-        category.setGroupId(groupId);
+        category.setGroup(group);
         category.setName("Rent");
         category.setSortOrder(1);
     }
 
     @Test
     void getBudget_returnsCorrectReadyToAssign() {
-        when(transactionRepository.sumNetUpToDate(any())).thenReturn(new BigDecimal("1000.00"));
-        when(budgetAllocationRepository.sumAssignedUpToMonth(any())).thenReturn(new BigDecimal("600.00"));
-        when(budgetAllocationRepository.findByMonth(any())).thenReturn(List.of());
-        when(transactionRepository.findSpentByCategoryForMonth(any(), any())).thenReturn(List.of());
-        when(categoryGroupRepository.findAllByOrderBySortOrderAsc()).thenReturn(List.of());
+        when(transactionRepository.sumNetUpToDate(any(), any())).thenReturn(new BigDecimal("1000.00"));
+        when(budgetAllocationRepository.sumAssignedUpToMonth(any(), any())).thenReturn(new BigDecimal("600.00"));
+        when(budgetAllocationRepository.findByMonthAndUserSub(any(), any())).thenReturn(List.of());
+        when(transactionRepository.findSpentByCategoryForMonth(any(), any(), any())).thenReturn(List.of());
+        when(categoryGroupRepository.findAllByUserSubOrderBySortOrderAsc(USER_SUB)).thenReturn(List.of());
 
-        BudgetViewDTO result = budgetService.getBudget("2026-05");
+        BudgetViewDTO result = budgetService.getBudget("2026-05", USER_SUB);
 
         assertEquals(new BigDecimal("400.00"), result.readyToAssign());
     }
 
     @Test
     void getBudget_readyToAssignIsNegative_whenOverAssigned() {
-        when(transactionRepository.sumNetUpToDate(any())).thenReturn(new BigDecimal("500.00"));
-        when(budgetAllocationRepository.sumAssignedUpToMonth(any())).thenReturn(new BigDecimal("800.00"));
-        when(budgetAllocationRepository.findByMonth(any())).thenReturn(List.of());
-        when(transactionRepository.findSpentByCategoryForMonth(any(), any())).thenReturn(List.of());
-        when(categoryGroupRepository.findAllByOrderBySortOrderAsc()).thenReturn(List.of());
+        when(transactionRepository.sumNetUpToDate(any(), any())).thenReturn(new BigDecimal("500.00"));
+        when(budgetAllocationRepository.sumAssignedUpToMonth(any(), any())).thenReturn(new BigDecimal("800.00"));
+        when(budgetAllocationRepository.findByMonthAndUserSub(any(), any())).thenReturn(List.of());
+        when(transactionRepository.findSpentByCategoryForMonth(any(), any(), any())).thenReturn(List.of());
+        when(categoryGroupRepository.findAllByUserSubOrderBySortOrderAsc(USER_SUB)).thenReturn(List.of());
 
-        BudgetViewDTO result = budgetService.getBudget("2026-05");
+        BudgetViewDTO result = budgetService.getBudget("2026-05", USER_SUB);
 
         assertEquals(new BigDecimal("-300.00"), result.readyToAssign());
     }
@@ -95,15 +100,15 @@ class BudgetServiceTest {
         allocation.setMonth(LocalDate.of(2026, 5, 1));
         allocation.setAssigned(new BigDecimal("500.00"));
 
-        when(transactionRepository.sumNetUpToDate(any())).thenReturn(BigDecimal.ZERO);
-        when(budgetAllocationRepository.sumAssignedUpToMonth(any())).thenReturn(BigDecimal.ZERO);
-        when(budgetAllocationRepository.findByMonth(any())).thenReturn(List.of(allocation));
-        when(transactionRepository.findSpentByCategoryForMonth(any(), any()))
+        when(transactionRepository.sumNetUpToDate(any(), any())).thenReturn(BigDecimal.ZERO);
+        when(budgetAllocationRepository.sumAssignedUpToMonth(any(), any())).thenReturn(BigDecimal.ZERO);
+        when(budgetAllocationRepository.findByMonthAndUserSub(any(), any())).thenReturn(List.of(allocation));
+        when(transactionRepository.findSpentByCategoryForMonth(any(), any(), any()))
             .thenReturn(List.of(new CategorySpent(categoryId, new BigDecimal("-200.00"))));
-        when(categoryGroupRepository.findAllByOrderBySortOrderAsc()).thenReturn(List.of(group));
-        when(budgetCategoryRepository.findByGroupIdOrderBySortOrderAsc(groupId)).thenReturn(List.of(category));
+        when(categoryGroupRepository.findAllByUserSubOrderBySortOrderAsc(USER_SUB)).thenReturn(List.of(group));
+        when(budgetCategoryRepository.findByGroupOrderBySortOrderAsc(group)).thenReturn(List.of(category));
 
-        BudgetViewDTO result = budgetService.getBudget("2026-05");
+        BudgetViewDTO result = budgetService.getBudget("2026-05", USER_SUB);
 
         var cat = result.groups().get(0).categories().get(0);
         assertEquals(new BigDecimal("500.00"), cat.assigned());
@@ -113,14 +118,14 @@ class BudgetServiceTest {
 
     @Test
     void getBudget_returnsZeroAvailable_whenNoAllocationOrSpending() {
-        when(transactionRepository.sumNetUpToDate(any())).thenReturn(BigDecimal.ZERO);
-        when(budgetAllocationRepository.sumAssignedUpToMonth(any())).thenReturn(BigDecimal.ZERO);
-        when(budgetAllocationRepository.findByMonth(any())).thenReturn(List.of());
-        when(transactionRepository.findSpentByCategoryForMonth(any(), any())).thenReturn(List.of());
-        when(categoryGroupRepository.findAllByOrderBySortOrderAsc()).thenReturn(List.of(group));
-        when(budgetCategoryRepository.findByGroupIdOrderBySortOrderAsc(groupId)).thenReturn(List.of(category));
+        when(transactionRepository.sumNetUpToDate(any(), any())).thenReturn(BigDecimal.ZERO);
+        when(budgetAllocationRepository.sumAssignedUpToMonth(any(), any())).thenReturn(BigDecimal.ZERO);
+        when(budgetAllocationRepository.findByMonthAndUserSub(any(), any())).thenReturn(List.of());
+        when(transactionRepository.findSpentByCategoryForMonth(any(), any(), any())).thenReturn(List.of());
+        when(categoryGroupRepository.findAllByUserSubOrderBySortOrderAsc(USER_SUB)).thenReturn(List.of(group));
+        when(budgetCategoryRepository.findByGroupOrderBySortOrderAsc(group)).thenReturn(List.of(category));
 
-        BudgetViewDTO result = budgetService.getBudget("2026-05");
+        BudgetViewDTO result = budgetService.getBudget("2026-05", USER_SUB);
 
         var cat = result.groups().get(0).categories().get(0);
         assertEquals(BigDecimal.ZERO, cat.assigned());
@@ -131,27 +136,38 @@ class BudgetServiceTest {
     @Test
     void getBudget_throwsBadRequest_whenMonthFormatInvalid() {
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-            () -> budgetService.getBudget("not-a-month"));
+            () -> budgetService.getBudget("not-a-month", USER_SUB));
 
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
     }
 
     @Test
     void upsertAllocation_callsRepository() {
-        when(budgetCategoryRepository.existsById(categoryId)).thenReturn(true);
+        when(budgetCategoryRepository.findById(categoryId)).thenReturn(Optional.of(category));
 
-        budgetService.upsertAllocation(new AllocationRequest(categoryId, "2026-05", new BigDecimal("300.00")));
+        budgetService.upsertAllocation(new AllocationRequest(categoryId, "2026-05", new BigDecimal("300.00")), USER_SUB);
 
         verify(budgetAllocationRepository).upsert(categoryId, LocalDate.of(2026, 5, 1), new BigDecimal("300.00"));
     }
 
     @Test
     void upsertAllocation_throwsNotFound_whenCategoryMissing() {
-        when(budgetCategoryRepository.existsById(categoryId)).thenReturn(false);
+        when(budgetCategoryRepository.findById(categoryId)).thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-            () -> budgetService.upsertAllocation(new AllocationRequest(categoryId, "2026-05", BigDecimal.ZERO)));
+            () -> budgetService.upsertAllocation(new AllocationRequest(categoryId, "2026-05", BigDecimal.ZERO), USER_SUB));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+    }
+
+    @Test
+    void upsertAllocation_throwsForbidden_whenCategoryBelongsToOtherUser() {
+        when(budgetCategoryRepository.findById(categoryId)).thenReturn(Optional.of(category));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+            () -> budgetService.upsertAllocation(new AllocationRequest(categoryId, "2026-05", BigDecimal.ZERO), OTHER_SUB));
+
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+        verify(budgetAllocationRepository, never()).upsert(any(), any(), any());
     }
 }

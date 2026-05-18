@@ -34,6 +34,9 @@ class AccountServiceTest {
     @InjectMocks
     private AccountService accountService;
 
+    private static final String USER_SUB = "auth0|test-user";
+    private static final String OTHER_SUB = "auth0|other-user";
+
     private UUID accountId;
     private Account account;
 
@@ -44,14 +47,15 @@ class AccountServiceTest {
         account.setId(accountId);
         account.setName("Test Account");
         account.setType(AccountType.CHECKING);
+        account.setUserSub(USER_SUB);
     }
 
     @Test
     void findAll_returnsAccountsWithComputedBalance() {
-        when(accountRepository.findAll()).thenReturn(List.of(account));
-        when(accountRepository.findAllBalances()).thenReturn(List.of(new AccountBalance(accountId, new BigDecimal("500.00"))));
+        when(accountRepository.findByUserSub(USER_SUB)).thenReturn(List.of(account));
+        when(accountRepository.findBalancesByUserSub(USER_SUB)).thenReturn(List.of(new AccountBalance(accountId, new BigDecimal("500.00"))));
 
-        List<AccountDTO> result = accountService.findAll();
+        List<AccountDTO> result = accountService.findAll(USER_SUB);
 
         assertEquals(1, result.size());
         AccountDTO dto = result.get(0);
@@ -63,10 +67,10 @@ class AccountServiceTest {
 
     @Test
     void findAll_returnsZeroBalance_whenAccountHasNoTransactions() {
-        when(accountRepository.findAll()).thenReturn(List.of(account));
-        when(accountRepository.findAllBalances()).thenReturn(List.of());
+        when(accountRepository.findByUserSub(USER_SUB)).thenReturn(List.of(account));
+        when(accountRepository.findBalancesByUserSub(USER_SUB)).thenReturn(List.of());
 
-        List<AccountDTO> result = accountService.findAll();
+        List<AccountDTO> result = accountService.findAll(USER_SUB);
 
         assertEquals(1, result.size());
         assertEquals(BigDecimal.ZERO, result.get(0).balance());
@@ -74,10 +78,10 @@ class AccountServiceTest {
 
     @Test
     void findAll_returnsEmptyList_whenNoAccounts() {
-        when(accountRepository.findAll()).thenReturn(List.of());
-        when(accountRepository.findAllBalances()).thenReturn(List.of());
+        when(accountRepository.findByUserSub(USER_SUB)).thenReturn(List.of());
+        when(accountRepository.findBalancesByUserSub(USER_SUB)).thenReturn(List.of());
 
-        List<AccountDTO> result = accountService.findAll();
+        List<AccountDTO> result = accountService.findAll(USER_SUB);
 
         assertTrue(result.isEmpty());
     }
@@ -87,7 +91,7 @@ class AccountServiceTest {
         AccountRequest req = new AccountRequest("New Account", AccountType.SAVINGS);
         when(accountRepository.save(any(Account.class))).thenReturn(account);
 
-        AccountDTO result = accountService.create(req);
+        AccountDTO result = accountService.create(req, USER_SUB);
 
         assertEquals(accountId, result.id());
         assertEquals(BigDecimal.ZERO, result.balance());
@@ -101,7 +105,7 @@ class AccountServiceTest {
         when(accountRepository.save(any(Account.class))).thenReturn(account);
         when(accountRepository.findBalanceById(accountId)).thenReturn(new BigDecimal("100.00"));
 
-        AccountDTO result = accountService.update(accountId, req);
+        AccountDTO result = accountService.update(accountId, req, USER_SUB);
 
         assertEquals("Updated Name", result.name());
         assertEquals(AccountType.SAVINGS, result.type());
@@ -113,28 +117,38 @@ class AccountServiceTest {
         when(accountRepository.findById(accountId)).thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-            () -> accountService.update(accountId, new AccountRequest("X", AccountType.CHECKING)));
+            () -> accountService.update(accountId, new AccountRequest("X", AccountType.CHECKING), USER_SUB));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
     }
 
     @Test
+    void update_throwsForbidden_whenAccountBelongsToOtherUser() {
+        when(accountRepository.findById(accountId)).thenReturn(Optional.of(account));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+            () -> accountService.update(accountId, new AccountRequest("X", AccountType.CHECKING), OTHER_SUB));
+
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+    }
+
+    @Test
     void delete_deletesAccount_whenNoTransactions() {
-        when(accountRepository.existsById(accountId)).thenReturn(true);
+        when(accountRepository.findById(accountId)).thenReturn(Optional.of(account));
         when(accountRepository.existsTransactionsByAccountId(accountId)).thenReturn(false);
 
-        accountService.delete(accountId);
+        accountService.delete(accountId, USER_SUB);
 
         verify(accountRepository).deleteById(accountId);
     }
 
     @Test
     void delete_throwsConflict_whenTransactionsExist() {
-        when(accountRepository.existsById(accountId)).thenReturn(true);
+        when(accountRepository.findById(accountId)).thenReturn(Optional.of(account));
         when(accountRepository.existsTransactionsByAccountId(accountId)).thenReturn(true);
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-            () -> accountService.delete(accountId));
+            () -> accountService.delete(accountId, USER_SUB));
 
         assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
         verify(accountRepository, never()).deleteById(any());
@@ -142,12 +156,23 @@ class AccountServiceTest {
 
     @Test
     void delete_throwsNotFound_whenAccountMissing() {
-        when(accountRepository.existsById(accountId)).thenReturn(false);
+        when(accountRepository.findById(accountId)).thenReturn(Optional.empty());
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-            () -> accountService.delete(accountId));
+            () -> accountService.delete(accountId, USER_SUB));
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+        verify(accountRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void delete_throwsForbidden_whenAccountBelongsToOtherUser() {
+        when(accountRepository.findById(accountId)).thenReturn(Optional.of(account));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+            () -> accountService.delete(accountId, OTHER_SUB));
+
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
         verify(accountRepository, never()).deleteById(any());
     }
 }

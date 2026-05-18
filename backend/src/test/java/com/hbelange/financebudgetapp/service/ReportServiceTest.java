@@ -33,6 +33,8 @@ class ReportServiceTest {
     @InjectMocks
     private ReportService reportService;
 
+    private static final String USER_SUB = "auth0|test-user";
+
     private UUID categoryId;
     private BudgetCategory category;
 
@@ -48,11 +50,11 @@ class ReportServiceTest {
 
     @Test
     void getDashboard_returnsCorrectValues() {
-        when(transactionRepository.sumNetWorth()).thenReturn(new BigDecimal("10000.00"));
-        when(transactionRepository.sumIncomeForMonth(any(), any())).thenReturn(new BigDecimal("3000.00"));
-        when(transactionRepository.sumSpentForMonth(any(), any())).thenReturn(new BigDecimal("-1500.00"));
+        when(transactionRepository.sumNetWorth(USER_SUB)).thenReturn(new BigDecimal("10000.00"));
+        when(transactionRepository.sumIncomeForMonth(any(), any(), any())).thenReturn(new BigDecimal("3000.00"));
+        when(transactionRepository.sumSpentForMonth(any(), any(), any())).thenReturn(new BigDecimal("-1500.00"));
 
-        DashboardDto result = reportService.getDashboard("2026-05");
+        DashboardDto result = reportService.getDashboard("2026-05", USER_SUB);
 
         assertEquals(new BigDecimal("10000.00"), result.netWorth());
         assertEquals(new BigDecimal("3000.00"), result.incomeThisMonth());
@@ -61,22 +63,22 @@ class ReportServiceTest {
 
     @Test
     void getDashboard_spentIsAbsoluteValue() {
-        when(transactionRepository.sumNetWorth()).thenReturn(BigDecimal.ZERO);
-        when(transactionRepository.sumIncomeForMonth(any(), any())).thenReturn(BigDecimal.ZERO);
-        when(transactionRepository.sumSpentForMonth(any(), any())).thenReturn(new BigDecimal("-500.00"));
+        when(transactionRepository.sumNetWorth(USER_SUB)).thenReturn(BigDecimal.ZERO);
+        when(transactionRepository.sumIncomeForMonth(any(), any(), any())).thenReturn(BigDecimal.ZERO);
+        when(transactionRepository.sumSpentForMonth(any(), any(), any())).thenReturn(new BigDecimal("-500.00"));
 
-        DashboardDto result = reportService.getDashboard("2026-05");
+        DashboardDto result = reportService.getDashboard("2026-05", USER_SUB);
 
         assertEquals(new BigDecimal("500.00"), result.spentThisMonth());
     }
 
     @Test
     void getDashboard_returnsZeros_whenNoTransactions() {
-        when(transactionRepository.sumNetWorth()).thenReturn(BigDecimal.ZERO);
-        when(transactionRepository.sumIncomeForMonth(any(), any())).thenReturn(BigDecimal.ZERO);
-        when(transactionRepository.sumSpentForMonth(any(), any())).thenReturn(BigDecimal.ZERO);
+        when(transactionRepository.sumNetWorth(USER_SUB)).thenReturn(BigDecimal.ZERO);
+        when(transactionRepository.sumIncomeForMonth(any(), any(), any())).thenReturn(BigDecimal.ZERO);
+        when(transactionRepository.sumSpentForMonth(any(), any(), any())).thenReturn(BigDecimal.ZERO);
 
-        DashboardDto result = reportService.getDashboard("2026-05");
+        DashboardDto result = reportService.getDashboard("2026-05", USER_SUB);
 
         assertEquals(BigDecimal.ZERO, result.netWorth());
         assertEquals(BigDecimal.ZERO, result.incomeThisMonth());
@@ -86,7 +88,7 @@ class ReportServiceTest {
     @Test
     void getDashboard_throwsBadRequest_whenMonthInvalid() {
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> reportService.getDashboard("not-a-month"));
+                () -> reportService.getDashboard("not-a-month", USER_SUB));
 
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
     }
@@ -99,12 +101,12 @@ class ReportServiceTest {
         cat2.setName("Groceries");
         cat2.setSortOrder(2);
 
-        when(transactionRepository.findExpenseByCategoryForMonth(any(), any())).thenReturn(List.of(
+        when(transactionRepository.findExpenseByCategoryForMonth(any(), any(), any())).thenReturn(List.of(
                 new CategorySpent(categoryId, new BigDecimal("-500.00")),
                 new CategorySpent(catId2, new BigDecimal("-1200.00"))));
         when(budgetCategoryRepository.findAllById(any())).thenReturn(List.of(category, cat2));
 
-        List<SpendingByCategoryDto> result = reportService.getSpendingByCategory("2026-05");
+        List<SpendingByCategoryDto> result = reportService.getSpendingByCategory("2026-05", USER_SUB);
 
         assertEquals(2, result.size());
         assertEquals("Groceries", result.get(0).categoryName());
@@ -115,9 +117,9 @@ class ReportServiceTest {
 
     @Test
     void getSpendingByCategory_returnsEmpty_whenNoSpending() {
-        when(transactionRepository.findExpenseByCategoryForMonth(any(), any())).thenReturn(List.of());
+        when(transactionRepository.findExpenseByCategoryForMonth(any(), any(), any())).thenReturn(List.of());
 
-        List<SpendingByCategoryDto> result = reportService.getSpendingByCategory("2026-05");
+        List<SpendingByCategoryDto> result = reportService.getSpendingByCategory("2026-05", USER_SUB);
 
         assertTrue(result.isEmpty());
         verifyNoInteractions(budgetCategoryRepository);
@@ -126,7 +128,7 @@ class ReportServiceTest {
     @Test
     void getSpendingByCategory_throwsBadRequest_whenMonthInvalid() {
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> reportService.getSpendingByCategory("bad-month"));
+                () -> reportService.getSpendingByCategory("bad-month", USER_SUB));
 
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
     }

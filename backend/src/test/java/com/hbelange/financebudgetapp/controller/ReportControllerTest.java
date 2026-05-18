@@ -1,6 +1,9 @@
 package com.hbelange.financebudgetapp.controller;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -12,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.server.ResponseStatusException;
@@ -20,10 +24,7 @@ import com.hbelange.financebudgetapp.dto.DashboardDto;
 import com.hbelange.financebudgetapp.dto.SpendingByCategoryDto;
 import com.hbelange.financebudgetapp.service.ReportService;
 
-import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
-import org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration;
-
-@WebMvcTest(value = ReportController.class, excludeAutoConfiguration = {SecurityAutoConfiguration.class, SecurityFilterAutoConfiguration.class})
+@WebMvcTest(ReportController.class)
 class ReportControllerTest {
 
     @Autowired
@@ -31,6 +32,9 @@ class ReportControllerTest {
 
     @MockitoBean
     private ReportService reportService;
+
+    @MockitoBean
+    private JwtDecoder jwtDecoder;
 
     private static final UUID CAT_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
 
@@ -40,9 +44,9 @@ class ReportControllerTest {
                 new BigDecimal("10000.00"),
                 new BigDecimal("3000.00"),
                 new BigDecimal("1500.00"));
-        when(reportService.getDashboard("2026-05")).thenReturn(dto);
+        when(reportService.getDashboard(eq("2026-05"), any())).thenReturn(dto);
 
-        mockMvc.perform(get("/api/reports/dashboard").param("month", "2026-05"))
+        mockMvc.perform(get("/api/reports/dashboard").with(jwt()).param("month", "2026-05"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.netWorth").value(10000.00))
                 .andExpect(jsonPath("$.incomeThisMonth").value(3000.00))
@@ -51,10 +55,10 @@ class ReportControllerTest {
 
     @Test
     void getDashboard_returns400_whenMonthInvalid() throws Exception {
-        when(reportService.getDashboard("bad-month"))
+        when(reportService.getDashboard(eq("bad-month"), any()))
                 .thenThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid month format"));
 
-        mockMvc.perform(get("/api/reports/dashboard").param("month", "bad-month"))
+        mockMvc.perform(get("/api/reports/dashboard").with(jwt()).param("month", "bad-month"))
                 .andExpect(status().isBadRequest());
     }
 
@@ -62,9 +66,9 @@ class ReportControllerTest {
     void getSpendingByCategory_returns200WithList() throws Exception {
         List<SpendingByCategoryDto> result = List.of(
                 new SpendingByCategoryDto(CAT_ID, "Rent", new BigDecimal("1200.00")));
-        when(reportService.getSpendingByCategory("2026-05")).thenReturn(result);
+        when(reportService.getSpendingByCategory(eq("2026-05"), any())).thenReturn(result);
 
-        mockMvc.perform(get("/api/reports/spending-by-category").param("month", "2026-05"))
+        mockMvc.perform(get("/api/reports/spending-by-category").with(jwt()).param("month", "2026-05"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].categoryId").value(CAT_ID.toString()))
                 .andExpect(jsonPath("$[0].categoryName").value("Rent"))
@@ -73,9 +77,9 @@ class ReportControllerTest {
 
     @Test
     void getSpendingByCategory_returns200WithEmptyList_whenNoSpending() throws Exception {
-        when(reportService.getSpendingByCategory("2026-05")).thenReturn(List.of());
+        when(reportService.getSpendingByCategory(eq("2026-05"), any())).thenReturn(List.of());
 
-        mockMvc.perform(get("/api/reports/spending-by-category").param("month", "2026-05"))
+        mockMvc.perform(get("/api/reports/spending-by-category").with(jwt()).param("month", "2026-05"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$").isEmpty());
@@ -83,10 +87,10 @@ class ReportControllerTest {
 
     @Test
     void getSpendingByCategory_returns400_whenMonthInvalid() throws Exception {
-        when(reportService.getSpendingByCategory("bad-month"))
+        when(reportService.getSpendingByCategory(eq("bad-month"), any()))
                 .thenThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid month format"));
 
-        mockMvc.perform(get("/api/reports/spending-by-category").param("month", "bad-month"))
+        mockMvc.perform(get("/api/reports/spending-by-category").with(jwt()).param("month", "bad-month"))
                 .andExpect(status().isBadRequest());
     }
 }
