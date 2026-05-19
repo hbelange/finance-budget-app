@@ -204,7 +204,7 @@ export default class BudgetComponent {
       this.categoryService.deleteGroup(group.id).subscribe({
         error: (err: HttpErrorResponse) => {
           this.budgetView.update(v => !v ? v : {
-            ...v,
+            readyToAssign: v.readyToAssign - refund,
             groups: [...v.groups.slice(0, originalIndex!), group, ...v.groups.slice(originalIndex!)]
           });
           const msg = err.status === 409
