@@ -193,8 +193,12 @@ export default class BudgetComponent {
     }).afterClosed().subscribe((confirmed: boolean | undefined) => {
       if (!confirmed) return;
       const originalIndex = this.budgetView()?.groups.findIndex(g => g.id === group.id);
+
+      // for each category in the group, we need to add its assigned amount back to readyToAssign
+      const refund = group.categories.reduce((sum, c) => sum + c.assigned, 0);
+
       this.budgetView.update(v => !v ? v : {
-          ...v,
+          readyToAssign: v.readyToAssign + refund,
           groups: v.groups.filter(g => g.id !== group.id),
         });
       this.categoryService.deleteGroup(group.id).subscribe({
@@ -263,7 +267,7 @@ export default class BudgetComponent {
       const originalIndex = originalGroup?.categories.findIndex(c => c.id === cat.id);
     
       this.budgetView.update(v => !v ? v : {
-          ...v,
+          readyToAssign: v.readyToAssign + cat.assigned,
           groups: v.groups.map(g => ({
             ...g,
             categories: g.categories.filter(c => c.id !== cat.id),
@@ -272,7 +276,7 @@ export default class BudgetComponent {
       this.categoryService.deleteCategory(cat.id).subscribe({
         error: (err: HttpErrorResponse) => {
           this.budgetView.update(v => !v ? v : {
-            ...v,
+            readyToAssign: v.readyToAssign - cat.assigned,
             groups: v.groups.map(g => {
               if (g.id !== originalGroup?.id) return g;
               const restored = [...g.categories];
