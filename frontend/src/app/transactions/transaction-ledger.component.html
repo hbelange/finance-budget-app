@@ -2,7 +2,14 @@
   <app-loading-spinner [isLoading]="isLoading()" [isWakingUp]="isWakingUp()" loadingText="Loading transactions..."></app-loading-spinner>
 } @else {
 <div class="page-header">
-  <h1 class="account-title">{{ account()?.name ?? '' }} — Transactions</h1>
+  <div class="account-info">
+    <h1 class="account-title">{{ account()?.name ?? '' }}</h1>
+    <span class="account-balance"
+      [class.positive]="(account()?.balance ?? 0) > 0"
+      [class.negative]="(account()?.balance ?? 0) < 0">
+      {{ account()?.balance | currency }}
+    </span>
+  </div>
   <button mat-flat-button (click)="openCreateDialog()">Add Transaction</button>
 </div>
 
