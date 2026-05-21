@@ -8,9 +8,8 @@ import { MatOptgroup, MatOption } from '@angular/material/core';
 import { MatSelect } from '@angular/material/select';
 import { MatCheckbox } from '@angular/material/checkbox';
 import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatSnackBar } from '@angular/material/snack-bar';
 import { CategoryGroup } from '../core/services/category.service';
-import { Transaction, TransactionRequest, TransactionService } from '../core/services/transaction.service';
+import { Transaction, TransactionRequest } from '../core/services/transaction.service';
 
 export interface TransactionDialogData {
   transaction: Transaction | null;
@@ -104,8 +103,6 @@ function toDateStr(date: Date): string {
 export class TransactionDialogComponent {
   protected readonly data = inject<TransactionDialogData>(MAT_DIALOG_DATA);
   private readonly dialogRef = inject(MatDialogRef<TransactionDialogComponent>);
-  private readonly transactionService = inject(TransactionService);
-  private readonly snackBar = inject(MatSnackBar);
 
   protected readonly form = new FormGroup({
     date: new FormControl<Date | null>(
@@ -131,12 +128,6 @@ export class TransactionDialogComponent {
       memo: memo || null,
       cleared,
     };
-    const call$ = this.data.transaction
-      ? this.transactionService.updateTransaction(this.data.transaction.id, req)
-      : this.transactionService.createTransaction(req);
-    call$.subscribe({
-      next: t => this.dialogRef.close(t),
-      error: () => this.snackBar.open('Failed to save transaction.', 'OK', { duration: 5000 }),
-    });
+    this.dialogRef.close(req);
   }
 }
