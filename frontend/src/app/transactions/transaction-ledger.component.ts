@@ -128,7 +128,8 @@ export default class TransactionLedgerComponent implements OnInit, AfterViewInit
         const tempId = crypto.randomUUID();
         const optimistic: Transaction = {
           id: tempId, accountId: this.accountId, date: req.date, payee: otherAccountName,
-          categoryId: null, amount: myAmount, memo: req.memo ?? null, cleared: req.cleared, transferId: null,
+          categoryId: null, amount: myAmount, memo: req.memo ?? null, cleared: req.cleared,
+          transferId: crypto.randomUUID(),
         };
         this.dataSource.data = this.sortedByDate([...this.dataSource.data, optimistic]);
         this.adjustBalance(myAmount);
