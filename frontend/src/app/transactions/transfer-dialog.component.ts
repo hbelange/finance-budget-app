@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButton } from '@angular/material/button';
@@ -67,7 +68,7 @@ function toDateStr(date: Date): string {
         <mat-form-field appearance="outline">
           <mat-label>To Account</mat-label>
           <mat-select formControlName="toAccountId">
-            @for (account of data.accounts; track account.id) {
+            @for (account of toAccounts(); track account.id) {
               <mat-option [value]="account.id">{{ account.name }}</mat-option>
             }
           </mat-select>
@@ -147,6 +148,9 @@ export class TransferDialogComponent {
     memo: new FormControl(this.data.transfer?.memo ?? '', { nonNullable: true }),
     cleared: new FormControl(this.data.transfer?.cleared ?? false, { nonNullable: true }),
   }, { validators: differentAccountsValidator });
+
+  private readonly selectedFromId = toSignal(this.form.controls.fromAccountId.valueChanges, { initialValue: this.initFromId });
+  protected readonly toAccounts = computed(() => this.data.accounts.filter(a => a.id !== this.selectedFromId()));
 
   protected submit(): void {
     if (this.form.invalid) return;
