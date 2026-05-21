@@ -12,6 +12,7 @@ export interface Transaction {
   amount: number;
   memo: string | null;
   cleared: boolean;
+  transferId: string | null;
 }
 
 export interface TransactionRequest {

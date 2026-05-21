@@ -44,10 +44,10 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
     @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.account.userSub = :userSub")
     BigDecimal sumNetWorth(@Param("userSub") String userSub);
 
-    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.amount > 0 AND t.date BETWEEN :start AND :end AND t.account.userSub = :userSub")
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.transferId IS NULL AND t.amount > 0 AND t.date BETWEEN :start AND :end AND t.account.userSub = :userSub")
     BigDecimal sumIncomeForMonth(@Param("start") LocalDate start, @Param("end") LocalDate end, @Param("userSub") String userSub);
 
-    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.amount < 0 AND t.date BETWEEN :start AND :end AND t.account.userSub = :userSub")
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.transferId IS NULL AND t.amount < 0 AND t.date BETWEEN :start AND :end AND t.account.userSub = :userSub")
     BigDecimal sumSpentForMonth(@Param("start") LocalDate start, @Param("end") LocalDate end, @Param("userSub") String userSub);
 
     @Query("SELECT NEW com.hbelange.financebudgetapp.dto.CategorySpent(t.categoryId, COALESCE(SUM(t.amount), 0)) FROM Transaction t WHERE t.categoryId IS NOT NULL AND t.amount < 0 AND t.date BETWEEN :start AND :end AND t.account.userSub = :userSub GROUP BY t.categoryId")
