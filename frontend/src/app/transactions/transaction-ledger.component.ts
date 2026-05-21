@@ -96,7 +96,10 @@ export default class TransactionLedgerComponent implements OnInit, AfterViewInit
     this.dialog.open(TransactionDialogComponent, { data })
       .afterClosed()
       .subscribe((t: Transaction | undefined) => {
-        if (t) this.dataSource.data = [...this.dataSource.data, t];
+        if (t) {
+          this.dataSource.data = [...this.dataSource.data, t];
+          this.loadAccounts();
+        }
       });
   }
 
@@ -107,7 +110,10 @@ export default class TransactionLedgerComponent implements OnInit, AfterViewInit
       .subscribe((legs: Transaction[] | undefined) => {
         if (!legs) return;
         const myLeg = legs.find(l => l.accountId === this.accountId);
-        if (myLeg) this.dataSource.data = [...this.dataSource.data, myLeg];
+        if (myLeg) {
+          this.dataSource.data = [...this.dataSource.data, myLeg];
+          this.loadAccounts();
+        }
       });
   }
 
@@ -125,14 +131,20 @@ export default class TransactionLedgerComponent implements OnInit, AfterViewInit
         .subscribe((legs: Transaction[] | undefined) => {
           if (!legs) return;
           const myLeg = legs.find(l => l.accountId === this.accountId);
-          if (myLeg) this.dataSource.data = this.dataSource.data.map(t => t.id === transaction.id ? myLeg : t);
+          if (myLeg) {
+            this.dataSource.data = this.dataSource.data.map(t => t.id === transaction.id ? myLeg : t);
+            this.loadAccounts();
+          }
         });
     } else {
       const data: TransactionDialogData = { transaction, accountId: this.accountId, categories: this.categories() };
       this.dialog.open(TransactionDialogComponent, { data })
         .afterClosed()
         .subscribe((updated: Transaction | undefined) => {
-          if (updated) this.dataSource.data = this.dataSource.data.map(t => t.id === updated.id ? updated : t);
+          if (updated) {
+            this.dataSource.data = this.dataSource.data.map(t => t.id === updated.id ? updated : t);
+            this.loadAccounts();
+          }
         });
     }
   }
