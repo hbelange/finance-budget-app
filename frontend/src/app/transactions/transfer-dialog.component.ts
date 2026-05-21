@@ -16,6 +16,7 @@ import { TransferRequest, TransferService } from '../core/services/transfer.serv
 export interface TransferDialogData {
   transfer: Transaction | null;
   currentAccountId: string;
+  pairedAccountId: string | null;
   accounts: Account[];
 }
 
@@ -125,19 +126,16 @@ export class TransferDialogComponent {
   private readonly transferService = inject(TransferService);
   private readonly snackBar = inject(MatSnackBar);
 
+  private readonly initFromId = this.data.transfer
+    ? (this.data.transfer.amount < 0 ? this.data.transfer.accountId : this.data.pairedAccountId)
+    : this.data.currentAccountId;
+  private readonly initToId = this.data.transfer
+    ? (this.data.transfer.amount > 0 ? this.data.transfer.accountId : this.data.pairedAccountId)
+    : null;
+
   protected readonly form = new FormGroup({
-    fromAccountId: new FormControl<string | null>(
-      this.data.transfer
-        ? (this.data.transfer.amount < 0 ? this.data.transfer.accountId : null)
-        : this.data.currentAccountId,
-      [Validators.required]
-    ),
-    toAccountId: new FormControl<string | null>(
-      this.data.transfer
-        ? (this.data.transfer.amount > 0 ? this.data.transfer.accountId : null)
-        : null,
-      [Validators.required]
-    ),
+    fromAccountId: new FormControl<string | null>(this.initFromId, [Validators.required]),
+    toAccountId: new FormControl<string | null>(this.initToId, [Validators.required]),
     date: new FormControl<Date | null>(
       this.data.transfer ? toLocalDate(this.data.transfer.date) : null,
       [Validators.required]
@@ -162,7 +160,7 @@ export class TransferDialogComponent {
       cleared,
     };
     const call$ = this.data.transfer
-      ? this.transferService.updateTransfer(this.data.transfer.transferId!, req)
+      ? this.transferService.updateTransfer(this.data.transfer.id, req)
       : this.transferService.createTransfer(req);
     call$.subscribe({
       next: legs => this.dialogRef.close(legs),

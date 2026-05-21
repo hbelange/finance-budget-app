@@ -101,7 +101,7 @@ export default class TransactionLedgerComponent implements OnInit, AfterViewInit
   }
 
   protected openTransferDialog(): void {
-    const data: TransferDialogData = { transfer: null, currentAccountId: this.accountId, accounts: this.allAccounts() };
+    const data: TransferDialogData = { transfer: null, currentAccountId: this.accountId, pairedAccountId: null, accounts: this.allAccounts() };
     this.dialog.open(TransferDialogComponent, { data })
       .afterClosed()
       .subscribe((legs: Transaction[] | undefined) => {
@@ -113,7 +113,13 @@ export default class TransactionLedgerComponent implements OnInit, AfterViewInit
 
   protected openEditDialog(transaction: Transaction): void {
     if (transaction.transferId != null) {
-      const data: TransferDialogData = { transfer: transaction, currentAccountId: this.accountId, accounts: this.allAccounts() };
+      const paired = this.dataSource.data.find(t => t.id === transaction.transferId);
+      const data: TransferDialogData = {
+        transfer: transaction,
+        currentAccountId: this.accountId,
+        pairedAccountId: paired?.accountId ?? null,
+        accounts: this.allAccounts(),
+      };
       this.dialog.open(TransferDialogComponent, { data })
         .afterClosed()
         .subscribe((legs: Transaction[] | undefined) => {

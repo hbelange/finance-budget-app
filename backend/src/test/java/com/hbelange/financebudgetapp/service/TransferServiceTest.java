@@ -222,6 +222,16 @@ class TransferServiceTest {
             .satisfies(e -> assertThat(((ResponseStatusException) e).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN));
     }
 
+    @Test
+    void updateTransfer_throwsBadRequest_whenNotATransferLeg() {
+        Transaction normalTx = buildTx(TO_TX_ID, toAccount, new BigDecimal("100.00"), null);
+        when(transactionRepository.findById(TO_TX_ID)).thenReturn(Optional.of(normalTx));
+
+        assertThatThrownBy(() -> transferService.updateTransfer(TO_TX_ID, req, USER_SUB))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(e -> assertThat(((ResponseStatusException) e).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST));
+    }
+
     // --- helpers ---
 
     private Transaction buildTx(UUID id, Account account, BigDecimal amount, UUID transferId) {
