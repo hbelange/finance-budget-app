@@ -98,6 +98,9 @@ public class TransactionService {
         if (!transaction.getAccount().getUserSub().equals(userSub)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
+        if (transaction.getTransferId() != null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Use DELETE /api/transfers/{id} to delete a transfer");
+        }  
         transactionRepository.deleteById(id);
     }
 
@@ -118,7 +121,8 @@ public class TransactionService {
             transaction.getCategoryId(),
             transaction.getAmount(),
             transaction.getMemo(),
-            transaction.getCleared()
+            transaction.getCleared(),
+            transaction.getTransferId()
         );
     }
 }
