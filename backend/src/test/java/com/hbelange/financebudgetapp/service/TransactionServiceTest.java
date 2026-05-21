@@ -266,4 +266,17 @@ class TransactionServiceTest {
             .isInstanceOf(ResponseStatusException.class)
             .satisfies(e -> assertThat(((ResponseStatusException) e).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND));
     }
+
+    @Test
+    void delete_throwsConflict_whenTransactionIsTransferLeg() {
+        UUID txId = txA_jan.getId();
+        txA_jan.setTransferId(UUID.randomUUID());
+        when(transactionRepository.findById(txId)).thenReturn(Optional.of(txA_jan));
+
+        assertThatThrownBy(() -> transactionService.delete(txId, USER_SUB))
+            .isInstanceOf(ResponseStatusException.class)
+            .satisfies(e -> assertThat(((ResponseStatusException) e).getStatusCode()).isEqualTo(HttpStatus.CONFLICT));
+
+        verify(transactionRepository, never()).deleteById(any());
+    }
 }

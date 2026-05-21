@@ -24,6 +24,7 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -50,7 +51,7 @@ class TransactionControllerTest {
 
     private static final TransactionDTO SAMPLE_DTO = new TransactionDTO(
         TRANSACTION_ID, ACCOUNT_ID, LocalDate.of(2026, 1, 15),
-        "Grocery Store", null, new BigDecimal("50.00"), null, false
+        "Grocery Store", null, new BigDecimal("50.00"), null, false, null
     );
 
     // --- POST /api/transactions ---
@@ -204,5 +205,14 @@ class TransactionControllerTest {
     void deleteTransaction_returns204() throws Exception {
         mockMvc.perform(delete("/api/transactions/" + TRANSACTION_ID).with(jwt()))
             .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void deleteTransaction_returns409_whenTransactionIsTransferLeg() throws Exception {
+        doThrow(new ResponseStatusException(HttpStatus.CONFLICT, "Use DELETE /api/transfers/{id} to delete a transfer"))
+            .when(transactionService).delete(eq(TRANSACTION_ID), any());
+
+        mockMvc.perform(delete("/api/transactions/" + TRANSACTION_ID).with(jwt()))
+            .andExpect(status().isConflict());
     }
 }
