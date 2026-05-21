@@ -9,10 +9,9 @@ import { MatOption } from '@angular/material/core';
 import { MatSelect } from '@angular/material/select';
 import { MatCheckbox } from '@angular/material/checkbox';
 import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatSnackBar } from '@angular/material/snack-bar';
 import { Account } from '../core/services/account.service';
 import { Transaction } from '../core/services/transaction.service';
-import { TransferRequest, TransferService } from '../core/services/transfer.service';
+import { TransferRequest } from '../core/services/transfer.service';
 
 export interface TransferDialogData {
   transfer: Transaction | null;
@@ -124,8 +123,6 @@ function toDateStr(date: Date): string {
 export class TransferDialogComponent {
   protected readonly data = inject<TransferDialogData>(MAT_DIALOG_DATA);
   private readonly dialogRef = inject(MatDialogRef<TransferDialogComponent>);
-  private readonly transferService = inject(TransferService);
-  private readonly snackBar = inject(MatSnackBar);
 
   private readonly initFromId = this.data.transfer
     ? (this.data.transfer.amount < 0 ? this.data.transfer.accountId : this.data.pairedAccountId)
@@ -163,12 +160,6 @@ export class TransferDialogComponent {
       memo: memo || null,
       cleared,
     };
-    const call$ = this.data.transfer
-      ? this.transferService.updateTransfer(this.data.transfer.id, req)
-      : this.transferService.createTransfer(req);
-    call$.subscribe({
-      next: legs => this.dialogRef.close(legs),
-      error: () => this.snackBar.open('Failed to save transfer.', 'OK', { duration: 5000 }),
-    });
+    this.dialogRef.close(req);
   }
 }
