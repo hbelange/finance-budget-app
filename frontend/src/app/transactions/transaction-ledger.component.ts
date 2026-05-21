@@ -16,9 +16,11 @@ import { MatIcon } from '@angular/material/icon';
 import { Account, AccountService } from '../core/services/account.service';
 import { CategoryGroup, CategoryService } from '../core/services/category.service';
 import { Transaction, TransactionService } from '../core/services/transaction.service';
+import { TransferService } from '../core/services/transfer.service';
 import { BudgetStateService } from '../core/services/budget-state.service';
 import { LayoutService } from '../core/services/layout.service';
 import { TransactionDialogComponent, TransactionDialogData } from './transaction-dialog.component';
+import { TransferDialogComponent, TransferDialogData } from './transfer-dialog.component';
 import { ConfirmDialogComponent } from '../accounts/confirm-dialog.component';
 import { AppLoadingSpinnerComponent } from '../shared/app-loading-spinner';
 
@@ -46,6 +48,7 @@ export default class TransactionLedgerComponent implements OnInit, AfterViewInit
   private readonly accountService = inject(AccountService);
   private readonly categoryService = inject(CategoryService);
   private readonly transactionService = inject(TransactionService);
+  private readonly transferService = inject(TransferService);
   private readonly budgetState = inject(BudgetStateService);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
@@ -54,6 +57,7 @@ export default class TransactionLedgerComponent implements OnInit, AfterViewInit
   private readonly month = toSignal(this.budgetState.month$, { requireSync: true });
 
   protected readonly account = signal<Account | null>(null);
+  protected readonly allAccounts = signal<Account[]>([]);
   protected readonly categories = signal<CategoryGroup[]>([]);
   protected readonly categoryMap = computed(() => {
     const map = new Map<string, string>();
@@ -78,7 +82,7 @@ export default class TransactionLedgerComponent implements OnInit, AfterViewInit
   private readonly _monthEffect = effect(() => this.loadTransactions(this.month()));
 
   ngOnInit(): void {
-    this.loadAccount();
+    this.loadAccounts();
     this.loadCategories();
   }
 
@@ -96,15 +100,35 @@ export default class TransactionLedgerComponent implements OnInit, AfterViewInit
       });
   }
 
-  protected openEditDialog(transaction: Transaction): void {
-    const data: TransactionDialogData = { transaction, accountId: this.accountId, categories: this.categories() };
-    this.dialog.open(TransactionDialogComponent, { data })
+  protected openTransferDialog(): void {
+    const data: TransferDialogData = { transfer: null, currentAccountId: this.accountId, accounts: this.allAccounts() };
+    this.dialog.open(TransferDialogComponent, { data })
       .afterClosed()
-      .subscribe((updated: Transaction | undefined) => {
-        if (updated) {
-          this.dataSource.data = this.dataSource.data.map(t => t.id === updated.id ? updated : t);
-        }
+      .subscribe((legs: Transaction[] | undefined) => {
+        if (!legs) return;
+        const myLeg = legs.find(l => l.accountId === this.accountId);
+        if (myLeg) this.dataSource.data = [...this.dataSource.data, myLeg];
       });
+  }
+
+  protected openEditDialog(transaction: Transaction): void {
+    if (transaction.transferId != null) {
+      const data: TransferDialogData = { transfer: transaction, currentAccountId: this.accountId, accounts: this.allAccounts() };
+      this.dialog.open(TransferDialogComponent, { data })
+        .afterClosed()
+        .subscribe((legs: Transaction[] | undefined) => {
+          if (!legs) return;
+          const myLeg = legs.find(l => l.accountId === this.accountId);
+          if (myLeg) this.dataSource.data = this.dataSource.data.map(t => t.id === transaction.id ? myLeg : t);
+        });
+    } else {
+      const data: TransactionDialogData = { transaction, accountId: this.accountId, categories: this.categories() };
+      this.dialog.open(TransactionDialogComponent, { data })
+        .afterClosed()
+        .subscribe((updated: Transaction | undefined) => {
+          if (updated) this.dataSource.data = this.dataSource.data.map(t => t.id === updated.id ? updated : t);
+        });
+    }
   }
 
   protected confirmDelete(transaction: Transaction): void {
@@ -115,9 +139,12 @@ export default class TransactionLedgerComponent implements OnInit, AfterViewInit
       });
   }
 
-  private loadAccount(): void {
+  private loadAccounts(): void {
     this.accountService.getAccounts().subscribe({
-      next: accounts => this.account.set(accounts.find(a => a.id === this.accountId) ?? null),
+      next: accounts => {
+        this.allAccounts.set(accounts);
+        this.account.set(accounts.find(a => a.id === this.accountId) ?? null);
+      },
       error: () => this.snackBar.open('Failed to load account.', 'OK', { duration: 5000 }),
     });
   }
@@ -157,8 +184,16 @@ export default class TransactionLedgerComponent implements OnInit, AfterViewInit
   }
 
   private deleteTransaction(transaction: Transaction): void {
-    this.transactionService.deleteTransaction(transaction.id).subscribe({
-      next: () => { this.dataSource.data = this.dataSource.data.filter(t => t.id !== transaction.id); },
+    const delete$ = transaction.transferId != null
+      ? this.transferService.deleteTransfer(transaction.id)
+      : this.transactionService.deleteTransaction(transaction.id);
+
+    delete$.subscribe({
+      next: () => {
+        this.dataSource.data = this.dataSource.data.filter(t =>
+          t.id !== transaction.id && t.id !== transaction.transferId
+        );
+      },
       error: () => this.snackBar.open('Failed to delete transaction.', 'OK', { duration: 5000 }),
     });
   }

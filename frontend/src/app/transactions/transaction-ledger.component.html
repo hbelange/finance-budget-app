@@ -10,7 +10,10 @@
       {{ account()?.balance | currency }}
     </span>
   </div>
-  <button mat-flat-button (click)="openCreateDialog()">Add Transaction</button>
+  <div class="header-actions">
+    <button mat-button (click)="openTransferDialog()">Add Transfer</button>
+    <button mat-flat-button (click)="openCreateDialog()">Add Transaction</button>
+  </div>
 </div>
 
 <mat-table [dataSource]="dataSource" matSort matSortActive="date" matSortDirection="desc">
@@ -28,7 +31,9 @@
         <div class="mobile-row-secondary">
           <div class="mobile-meta-group">
             <span class="mobile-date">{{ t.date | date:'mediumDate':'UTC' }}</span>
-            @if (t.categoryId) {
+            @if (t.transferId) {
+              <span class="mobile-meta"> · Transfer</span>
+            } @else if (t.categoryId) {
               <span class="mobile-meta"> · {{ categoryMap().get(t.categoryId) }}</span>
             }
             @if (t.memo) {
@@ -63,7 +68,13 @@
 
   <ng-container matColumnDef="category">
     <mat-header-cell *matHeaderCellDef>Category</mat-header-cell>
-    <mat-cell *matCellDef="let t">{{ t.categoryId ? (categoryMap().get(t.categoryId) ?? '—') : '—' }}</mat-cell>
+    <mat-cell *matCellDef="let t">
+      @if (t.transferId) {
+        Transfer
+      } @else {
+        {{ t.categoryId ? (categoryMap().get(t.categoryId) ?? '—') : '—' }}
+      }
+    </mat-cell>
   </ng-container>
 
   <ng-container matColumnDef="memo">
