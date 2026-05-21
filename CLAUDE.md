@@ -2,6 +2,9 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Commit Messages
+- DO NOT co-author commits. DO NOT ADD "Co-Authored-By: ..." to commit messages!
+
 ## Project
 
 Full-stack Spring Boot application for personal finance and budget tracking.

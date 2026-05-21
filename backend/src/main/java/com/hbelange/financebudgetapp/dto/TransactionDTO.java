@@ -12,5 +12,6 @@ public record TransactionDTO (
     UUID categoryId,
     BigDecimal amount,
     String memo,
-    boolean cleared
+    boolean cleared,
+    UUID transferId
 ){}
