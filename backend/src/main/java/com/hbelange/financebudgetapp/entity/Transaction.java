@@ -45,4 +45,6 @@ public class Transaction {
 
     @Column(columnDefinition = "boolean default false")
     private Boolean cleared;
+
+    private UUID transferId;
 }
