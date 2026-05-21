@@ -22,6 +22,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.hbelange.financebudgetapp.dto.DashboardDto;
 import com.hbelange.financebudgetapp.dto.SpendingByCategoryDto;
+import com.hbelange.financebudgetapp.repository.UserRepository;
 import com.hbelange.financebudgetapp.service.ReportService;
 
 @WebMvcTest(ReportController.class)
@@ -35,6 +36,9 @@ class ReportControllerTest {
 
     @MockitoBean
     private JwtDecoder jwtDecoder;
+
+    @MockitoBean
+    private UserRepository userRepository;
 
     private static final UUID CAT_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
 
