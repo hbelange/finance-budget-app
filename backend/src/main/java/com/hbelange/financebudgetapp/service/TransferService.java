@@ -42,9 +42,9 @@ public class TransferService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
-        Transaction toTransaction = createTransaction(toAccount, req, true);
+        Transaction toTransaction = createTransaction(toAccount, fromAccount, req, true);
 
-        Transaction fromTransaction = createTransaction(fromAccount, req, false);
+        Transaction fromTransaction = createTransaction(fromAccount, toAccount, req, false);
         
         // Save the "to" transaction first to generate an ID for the transfer
         Transaction savedToTransaction = transactionRepository.save(toTransaction);
@@ -113,11 +113,13 @@ public class TransferService {
         
         toTransaction.setDate(req.date());
         toTransaction.setAmount(req.amount());
+        toTransaction.setPayee(fromTransaction.getAccount().getName());
         toTransaction.setMemo(req.memo());
         toTransaction.setCleared(req.cleared() != null ? req.cleared() : false);
 
         fromTransaction.setDate(req.date());
         fromTransaction.setAmount(req.amount().negate());
+        fromTransaction.setPayee(toTransaction.getAccount().getName());
         fromTransaction.setMemo(req.memo());
         fromTransaction.setCleared(req.cleared() != null ? req.cleared() : false);
 
@@ -128,14 +130,14 @@ public class TransferService {
 
     }
 
-    private Transaction createTransaction(Account account, TransferRequest req, boolean isTo) {
+    private Transaction createTransaction(Account account, Account otherAccount, TransferRequest req, boolean isTo) {
         Transaction transaction = new Transaction();
         transaction.setAccount(account);
         transaction.setDate(req.date());
         transaction.setAmount(isTo ? req.amount() : req.amount().negate());
         transaction.setMemo(req.memo());
         transaction.setCleared(req.cleared() != null ? req.cleared() : false);
-        transaction.setPayee("Transfer");
+        transaction.setPayee(otherAccount.getName());
         return transaction;
     }
 
