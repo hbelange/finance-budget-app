@@ -18,6 +18,7 @@ import com.hbelange.financebudgetapp.dto.CategoryGroupRequest;
 import com.hbelange.financebudgetapp.dto.SortItem;
 import com.hbelange.financebudgetapp.entity.BudgetCategory;
 import com.hbelange.financebudgetapp.entity.CategoryGroup;
+import com.hbelange.financebudgetapp.repository.AccountRepository;
 import com.hbelange.financebudgetapp.repository.BudgetAllocationRepository;
 import com.hbelange.financebudgetapp.repository.BudgetCategoryRepository;
 import com.hbelange.financebudgetapp.repository.CategoryGroupRepository;
@@ -28,14 +29,17 @@ public class CategoryService {
     private final CategoryGroupRepository categoryGroupRepository;
     private final BudgetCategoryRepository budgetCategoryRepository;
     private final BudgetAllocationRepository budgetAllocationRepository;
+    private final AccountRepository accountRepository;
 
     @Autowired
     public CategoryService(CategoryGroupRepository categoryGroupRepository,
                            BudgetCategoryRepository budgetCategoryRepository,
-                           BudgetAllocationRepository budgetAllocationRepository) {
+                           BudgetAllocationRepository budgetAllocationRepository,
+                           AccountRepository accountRepository) {
         this.categoryGroupRepository = categoryGroupRepository;
         this.budgetCategoryRepository = budgetCategoryRepository;
         this.budgetAllocationRepository = budgetAllocationRepository;
+        this.accountRepository = accountRepository;
     }
 
     public List<CategoryGroupDTO> findAllGroups(String userSub) {
@@ -95,6 +99,10 @@ public class CategoryService {
         if (!category.getGroup().getUserSub().equals(userSub)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have permission to rename this category");
         }
+        if (accountRepository.existsByCcPaymentCategoryId(id)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "This category is managed by a linked credit card account");
+        }
         category.setName(req.name());
         budgetCategoryRepository.save(category);
     }
@@ -152,7 +160,11 @@ public class CategoryService {
         if (!group.getUserSub().equals(userSub)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have permission to delete this group");
         }
-
+        if (budgetCategoryRepository.findByGroupOrderBySortOrderAsc(group)
+                .stream().anyMatch(c -> accountRepository.existsByCcPaymentCategoryId(c.getId()))) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "This group contains a category managed by a linked credit card account");
+        }
         if (budgetCategoryRepository.existsTransactionsByGroupId(id)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Group contains categories with existing transactions");
         }
@@ -170,7 +182,10 @@ public class CategoryService {
         if (!category.getGroup().getUserSub().equals(userSub)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have permission to delete this category");
         }
-
+        if (accountRepository.existsByCcPaymentCategoryId(id)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "This category is managed by a linked credit card account");
+        }
         if (budgetCategoryRepository.existsTransactionsByCategoryId(id)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Category has existing transactions");
         }
