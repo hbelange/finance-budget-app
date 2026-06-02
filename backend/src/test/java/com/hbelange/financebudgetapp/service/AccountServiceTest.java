@@ -24,12 +24,16 @@ import com.hbelange.financebudgetapp.dto.AccountRequest;
 import com.hbelange.financebudgetapp.entity.Account;
 import com.hbelange.financebudgetapp.enums.AccountType;
 import com.hbelange.financebudgetapp.repository.AccountRepository;
+import com.hbelange.financebudgetapp.service.CreditCardService;
 
 @ExtendWith(MockitoExtension.class)
 class AccountServiceTest {
 
     @Mock
     private AccountRepository accountRepository;
+
+    @Mock
+    private CreditCardService creditCardService;
 
     @InjectMocks
     private AccountService accountService;
@@ -174,5 +178,86 @@ class AccountServiceTest {
 
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
         verify(accountRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void create_callsEnsureCCPaymentCategory_whenCreditCard() {
+        Account saved = new Account();
+        saved.setId(accountId);
+        saved.setName("My Visa");
+        saved.setType(AccountType.CREDIT_CARD);
+        saved.setUserSub(USER_SUB);
+
+        AccountRequest req = new AccountRequest("My Visa", AccountType.CREDIT_CARD);
+        when(accountRepository.save(any(Account.class))).thenReturn(saved);
+
+        accountService.create(req, USER_SUB);
+
+        verify(creditCardService).ensureCCPaymentCategory(saved, USER_SUB);
+    }
+
+    @Test
+    void create_doesNotCallCCService_whenNotCreditCard() {
+        AccountRequest req = new AccountRequest("Checking", AccountType.CHECKING);
+        when(accountRepository.save(any(Account.class))).thenReturn(account);
+
+        accountService.create(req, USER_SUB);
+
+        verify(creditCardService, never()).ensureCCPaymentCategory(any(), any());
+    }
+
+    @Test
+    void update_callsSyncCategoryName_whenNameChangedOnCC() {
+        account.setType(AccountType.CREDIT_CARD);
+        AccountRequest req = new AccountRequest("New Name", AccountType.CREDIT_CARD);
+        when(accountRepository.findById(accountId)).thenReturn(Optional.of(account));
+        when(accountRepository.save(any(Account.class))).thenReturn(account);
+        when(accountRepository.findBalanceById(accountId)).thenReturn(BigDecimal.ZERO);
+
+        accountService.update(accountId, req, USER_SUB);
+
+        verify(creditCardService).syncCategoryName(any(Account.class));
+    }
+
+    @Test
+    void update_doesNotCallSyncCategoryName_whenNameUnchanged() {
+        account.setType(AccountType.CREDIT_CARD);
+        account.setName("My Visa");
+        AccountRequest req = new AccountRequest("My Visa", AccountType.CREDIT_CARD);
+        when(accountRepository.findById(accountId)).thenReturn(Optional.of(account));
+        when(accountRepository.save(any(Account.class))).thenReturn(account);
+        when(accountRepository.findBalanceById(accountId)).thenReturn(BigDecimal.ZERO);
+
+        accountService.update(accountId, req, USER_SUB);
+
+        verify(creditCardService, never()).syncCategoryName(any());
+    }
+
+    @Test
+    void update_callsEnsureCCPaymentCategory_whenTypeChangedToCC() {
+        account.setType(AccountType.CHECKING);
+        AccountRequest req = new AccountRequest("My Visa", AccountType.CREDIT_CARD);
+        when(accountRepository.findById(accountId)).thenReturn(Optional.of(account));
+        when(accountRepository.save(any(Account.class))).thenReturn(account);
+        when(accountRepository.findBalanceById(accountId)).thenReturn(BigDecimal.ZERO);
+
+        accountService.update(accountId, req, USER_SUB);
+
+        verify(creditCardService).ensureCCPaymentCategory(any(Account.class), eq(USER_SUB));
+        verify(creditCardService, never()).deleteCCPaymentCategory(any());
+    }
+
+    @Test
+    void update_callsDeleteCCPaymentCategory_whenTypeChangedAwayFromCC() {
+        account.setType(AccountType.CREDIT_CARD);
+        AccountRequest req = new AccountRequest("My Account", AccountType.CHECKING);
+        when(accountRepository.findById(accountId)).thenReturn(Optional.of(account));
+        when(accountRepository.save(any(Account.class))).thenReturn(account);
+        when(accountRepository.findBalanceById(accountId)).thenReturn(BigDecimal.ZERO);
+
+        accountService.update(accountId, req, USER_SUB);
+
+        verify(creditCardService).deleteCCPaymentCategory(account);
+        verify(creditCardService, never()).ensureCCPaymentCategory(any(), any());
     }
 }
