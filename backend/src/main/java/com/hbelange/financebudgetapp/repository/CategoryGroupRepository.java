@@ -14,4 +14,5 @@ import com.hbelange.financebudgetapp.entity.CategoryGroup;
 public interface CategoryGroupRepository extends JpaRepository<CategoryGroup, UUID> {
     List<CategoryGroup> findAllByUserSubOrderBySortOrderAsc(String userSub);
     Optional<CategoryGroup> findTopByUserSubOrderBySortOrderDesc(String userSub);
+    Optional<CategoryGroup> findByUserSubAndName(String userSub, String name);
 }

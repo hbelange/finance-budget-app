@@ -26,4 +26,8 @@ public interface AccountRepository extends JpaRepository<Account, UUID> {
 
     @Query("SELECT NEW com.hbelange.financebudgetapp.dto.AccountBalance(t.account.id, COALESCE(SUM(t.amount), 0)) FROM Transaction t WHERE t.account.userSub = :userSub GROUP BY t.account.id")
     List<AccountBalance> findBalancesByUserSub(String userSub);
+
+    List<Account> findByUserSubAndCcPaymentCategoryIdNotNull(String userSub);
+
+    boolean existsByCcPaymentCategoryId(UUID ccPaymentCategoryId);
 }
