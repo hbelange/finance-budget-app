@@ -144,6 +144,22 @@ class AccountServiceTest {
         accountService.delete(accountId, USER_SUB);
 
         verify(accountRepository).deleteById(accountId);
+        verify(creditCardService, never()).deleteCCPaymentCategory(any());
+    }
+
+    @Test
+    void delete_cleansCCPaymentCategory_whenCreditCardAccountDeleted() {
+        Account ccAccount = new Account();
+        ccAccount.setId(accountId);
+        ccAccount.setUserSub(USER_SUB);
+        ccAccount.setType(AccountType.CREDIT_CARD);
+        when(accountRepository.findById(accountId)).thenReturn(Optional.of(ccAccount));
+        when(accountRepository.existsTransactionsByAccountId(accountId)).thenReturn(false);
+
+        accountService.delete(accountId, USER_SUB);
+
+        verify(creditCardService).deleteCCPaymentCategory(ccAccount);
+        verify(accountRepository).deleteById(accountId);
     }
 
     @Test
