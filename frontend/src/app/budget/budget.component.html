@@ -71,40 +71,50 @@
               (cdkDropListDropped)="onCategoryDrop(group, $event)"
             >
               @for (cat of group.categories; track cat.id) {
-                <tr cdkDrag [cdkDragData]="cat">
+                <tr cdkDrag [cdkDragData]="cat" [cdkDragDisabled]="cat.systemManaged">
                   <td class="col-drag">
-                    <span cdkDragHandle class="drag-handle" aria-label="Drag to reorder category">
-                      <mat-icon>drag_indicator</mat-icon>
-                    </span>
+                    @if (!cat.systemManaged) {
+                      <span cdkDragHandle class="drag-handle" aria-label="Drag to reorder category">
+                        <mat-icon>drag_indicator</mat-icon>
+                      </span>
+                    }
                   </td>
                   <td class="col-name">{{ cat.name }}</td>
-                  <td class="col-number col-assigned">
-                    <input
-                      class="assigned-input"
-                      type="text"
-                      inputmode="decimal"
-                      [value]="cat.assigned | currency"
-                      (focus)="onAssignedFocus($event, cat)"
-                      (blur)="onAssignedBlur(group.id, cat.id, $event)"
-                      (keydown.enter)="onAssignedEnter($event)"
-                    />
-                  </td>
-                  <td class="col-number spent">{{ abs(cat.spent) | currency }}</td>
-                  <td class="col-number col-available" [class.positive]="cat.available >= 0" [class.negative]="cat.available < 0">
-                    {{ cat.available | currency }}
-                  </td>
+                  @if (cat.systemManaged) {
+                    <td class="col-number col-owed" colspan="3">
+                      Owed: {{ cat.available | currency }}
+                    </td>
+                  } @else {
+                    <td class="col-number col-assigned">
+                      <input
+                        class="assigned-input"
+                        type="text"
+                        inputmode="decimal"
+                        [value]="cat.assigned | currency"
+                        (focus)="onAssignedFocus($event, cat)"
+                        (blur)="onAssignedBlur(group.id, cat.id, $event)"
+                        (keydown.enter)="onAssignedEnter($event)"
+                      />
+                    </td>
+                    <td class="col-number spent">{{ abs(cat.spent) | currency }}</td>
+                    <td class="col-number col-available" [class.positive]="cat.available >= 0" [class.negative]="cat.available < 0">
+                      {{ cat.available | currency }}
+                    </td>
+                  }
                   <ng-template cdkDragPreview>
                     <div class="category-drag-preview">{{ cat.name }}</div>
                   </ng-template>
                   <td class="col-actions">
-                    <button mat-icon-button [attr.aria-label]="'Rename ' + cat.name"
-                      (click)="openRenameCategory(cat)">
-                      <mat-icon>edit</mat-icon>
-                    </button>
-                    <button mat-icon-button [attr.aria-label]="'Delete ' + cat.name"
-                      (click)="confirmDeleteCategory(cat)">
-                      <mat-icon>delete</mat-icon>
-                    </button>
+                    @if (!cat.systemManaged) {
+                      <button mat-icon-button [attr.aria-label]="'Rename ' + cat.name"
+                        (click)="openRenameCategory(cat)">
+                        <mat-icon>edit</mat-icon>
+                      </button>
+                      <button mat-icon-button [attr.aria-label]="'Delete ' + cat.name"
+                        (click)="confirmDeleteCategory(cat)">
+                        <mat-icon>delete</mat-icon>
+                      </button>
+                    }
                   </td>
                 </tr>
               }
