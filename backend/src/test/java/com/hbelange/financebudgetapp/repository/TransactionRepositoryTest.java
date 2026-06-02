@@ -33,6 +33,7 @@ class TransactionRepositoryTest {
 
     private Account accountA;
     private Account accountB;
+    private Account ccAccount;
 
     private final Pageable page = PageRequest.of(0, 10);
 
@@ -49,6 +50,12 @@ class TransactionRepositoryTest {
         accountB.setType(AccountType.SAVINGS);
         accountB.setUserSub("auth0|test-user");
         accountB = accountRepository.save(accountB);
+
+        ccAccount = new Account();
+        ccAccount.setName("My Visa");
+        ccAccount.setType(AccountType.CREDIT_CARD);
+        ccAccount.setUserSub("auth0|test-user");
+        ccAccount = accountRepository.save(ccAccount);
 
         saveTransaction(accountA, LocalDate.of(2026, 1, 1), "50.00");
         saveTransaction(accountA, LocalDate.of(2026, 1, 10), "100.00");
@@ -235,6 +242,91 @@ class TransactionRepositoryTest {
                 LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31), "auth0|test-user");
 
         assertThat(result).isEmpty();
+    }
+
+    // --- sumNetExcludingCCPurchases ---
+
+    @Test
+    void sumNetExcludingCCPurchases_includesNormalTransactions() {
+        // accountA (CHECKING): 50 + 100 - 30 = 120, through Jan 31 (excludes Feb accountB)
+        BigDecimal result = transactionRepository.sumNetExcludingCCPurchases(
+            LocalDate.of(2026, 1, 31), "auth0|test-user");
+        assertThat(result).isEqualByComparingTo("120.00");
+    }
+
+    @Test
+    void sumNetExcludingCCPurchases_excludesCCPurchasesWithCategory() {
+        UUID catId = UUID.randomUUID();
+        // CC transaction with category (expense) — must be excluded
+        Transaction ccPurchase = new Transaction();
+        ccPurchase.setAccount(ccAccount);
+        ccPurchase.setDate(LocalDate.of(2026, 1, 15));
+        ccPurchase.setAmount(new BigDecimal("-50.00"));
+        ccPurchase.setCategoryId(catId);
+        transactionRepository.save(ccPurchase);
+
+        BigDecimal result = transactionRepository.sumNetExcludingCCPurchases(
+            LocalDate.of(2026, 1, 31), "auth0|test-user");
+        // 120 from accountA; -50 CC purchase excluded → still 120
+        assertThat(result).isEqualByComparingTo("120.00");
+    }
+
+    @Test
+    void sumNetExcludingCCPurchases_includesCCTransfersEvenWithCategory() {
+        UUID catId = UUID.randomUUID();
+        UUID transferId = UUID.randomUUID();
+        // CC transaction WITH category AND transferId — transferId breaks the exclusion rule, so included
+        Transaction ccTransfer = new Transaction();
+        ccTransfer.setAccount(ccAccount);
+        ccTransfer.setDate(LocalDate.of(2026, 1, 20));
+        ccTransfer.setAmount(new BigDecimal("100.00"));
+        ccTransfer.setCategoryId(catId);
+        ccTransfer.setTransferId(transferId);
+        transactionRepository.save(ccTransfer);
+
+        BigDecimal result = transactionRepository.sumNetExcludingCCPurchases(
+            LocalDate.of(2026, 1, 31), "auth0|test-user");
+        assertThat(result).isEqualByComparingTo("220.00"); // 120 + 100
+    }
+
+    @Test
+    void sumNetExcludingCCPurchases_includesCCTransactionWithoutCategory() {
+        // CC transaction with no category (e.g. a transfer leg) — NOT a CC purchase, so included
+        Transaction ccUncategorized = new Transaction();
+        ccUncategorized.setAccount(ccAccount);
+        ccUncategorized.setDate(LocalDate.of(2026, 1, 15));
+        ccUncategorized.setAmount(new BigDecimal("100.00"));
+        // no categoryId, no transferId
+        transactionRepository.save(ccUncategorized);
+
+        BigDecimal result = transactionRepository.sumNetExcludingCCPurchases(
+            LocalDate.of(2026, 1, 31), "auth0|test-user");
+        assertThat(result).isEqualByComparingTo("220.00"); // 120 + 100
+    }
+
+    // --- sumForAccount ---
+
+    @Test
+    void sumForAccount_returnsSumOfAllTransactionsUpToDate() {
+        // accountA has: 50 (Jan 1), 100 (Jan 10), -30 (Jan 20) = 120 through Jan 31
+        BigDecimal result = transactionRepository.sumForAccount(
+            accountA.getId(), LocalDate.of(2026, 1, 31));
+        assertThat(result).isEqualByComparingTo("120.00");
+    }
+
+    @Test
+    void sumForAccount_respectsCutoffDate() {
+        // Only Jan 1 transaction (50) is on or before Jan 1
+        BigDecimal result = transactionRepository.sumForAccount(
+            accountA.getId(), LocalDate.of(2026, 1, 1));
+        assertThat(result).isEqualByComparingTo("50.00");
+    }
+
+    @Test
+    void sumForAccount_returnsZero_whenNoTransactions() {
+        BigDecimal result = transactionRepository.sumForAccount(
+            ccAccount.getId(), LocalDate.of(2026, 1, 31));
+        assertThat(result).isEqualByComparingTo(BigDecimal.ZERO);
     }
 
     private Transaction saveTransaction(Account acct, LocalDate date, String amount) {
