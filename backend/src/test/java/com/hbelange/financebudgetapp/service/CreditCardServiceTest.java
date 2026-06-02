@@ -11,7 +11,6 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -146,5 +145,14 @@ class CreditCardServiceTest {
         creditCardService.deleteCCPaymentCategory(ccAccount);
 
         verify(categoryGroupRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void deleteCCPaymentCategory_doesNothingWhenNoCcPaymentCategoryId() {
+        // ccAccount has null ccPaymentCategoryId (default)
+        creditCardService.deleteCCPaymentCategory(ccAccount);
+
+        verifyNoInteractions(budgetCategoryRepository);
+        verifyNoInteractions(categoryGroupRepository);
     }
 }
