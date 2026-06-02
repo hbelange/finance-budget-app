@@ -58,6 +58,14 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
     @Query("SELECT t FROM Transaction t WHERE t.account.userSub = :userSub AND t.date BETWEEN :start AND :end")
     Page<Transaction> findByUserSubAndDateBetween(@Param("userSub") String userSub, @Param("start") LocalDate start, @Param("end") LocalDate end, Pageable pageable);
 
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t " +
+           "WHERE t.date <= :lastDay AND t.account.userSub = :userSub " +
+           "AND NOT (t.account.type = 'CREDIT_CARD' AND t.categoryId IS NOT NULL AND t.transferId IS NULL)")
+    BigDecimal sumNetExcludingCCPurchases(@Param("lastDay") LocalDate lastDay, @Param("userSub") String userSub);
+
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.account.id = :accountId AND t.date <= :lastDay")
+    BigDecimal sumForAccount(@Param("accountId") UUID accountId, @Param("lastDay") LocalDate lastDay);
+
     /** Returns null when the table is empty — expected behavior for an aggregate with no rows. */
     @Query("SELECT MIN(t.date) FROM Transaction t")
     LocalDate findMinDate();
