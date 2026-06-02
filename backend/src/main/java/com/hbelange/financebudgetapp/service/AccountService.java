@@ -94,6 +94,9 @@ public class AccountService {
         if (accountRepository.existsTransactionsByAccountId(id)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Account has existing transactions");
         }
+        if (account.getType() == AccountType.CREDIT_CARD) {
+            creditCardService.deleteCCPaymentCategory(account);
+        }
         accountRepository.deleteById(id);
     }
 
