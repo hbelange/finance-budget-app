@@ -24,6 +24,7 @@ import com.hbelange.financebudgetapp.dto.CategoryGroupRequest;
 import com.hbelange.financebudgetapp.dto.SortItem;
 import com.hbelange.financebudgetapp.entity.BudgetCategory;
 import com.hbelange.financebudgetapp.entity.CategoryGroup;
+import com.hbelange.financebudgetapp.repository.AccountRepository;
 import com.hbelange.financebudgetapp.repository.BudgetAllocationRepository;
 import com.hbelange.financebudgetapp.repository.BudgetCategoryRepository;
 import com.hbelange.financebudgetapp.repository.CategoryGroupRepository;
@@ -34,6 +35,7 @@ class CategoryServiceTest {
     @Mock private CategoryGroupRepository categoryGroupRepository;
     @Mock private BudgetCategoryRepository budgetCategoryRepository;
     @Mock private BudgetAllocationRepository budgetAllocationRepository;
+    @Mock private AccountRepository accountRepository;
 
     @InjectMocks
     private CategoryService categoryService;
@@ -327,5 +329,42 @@ class CategoryServiceTest {
         categoryService.deleteCategory(categoryId, USER_SUB);
 
         verify(budgetCategoryRepository).deleteById(categoryId);
+    }
+
+    @Test
+    void deleteCategory_throwsConflict_whenSystemManaged() {
+        when(budgetCategoryRepository.findById(categoryId)).thenReturn(Optional.of(category));
+        when(accountRepository.existsByCcPaymentCategoryId(categoryId)).thenReturn(true);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+            () -> categoryService.deleteCategory(categoryId, USER_SUB));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        verify(budgetCategoryRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void renameCategory_throwsConflict_whenSystemManaged() {
+        when(budgetCategoryRepository.findById(categoryId)).thenReturn(Optional.of(category));
+        when(accountRepository.existsByCcPaymentCategoryId(categoryId)).thenReturn(true);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+            () -> categoryService.renameCategory(categoryId, new BudgetCategoryRequest("New Name"), USER_SUB));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        verify(budgetCategoryRepository, never()).save(any());
+    }
+
+    @Test
+    void deleteGroup_throwsConflict_whenGroupContainsSystemManagedCategory() {
+        when(categoryGroupRepository.findById(groupId)).thenReturn(Optional.of(group));
+        when(budgetCategoryRepository.findByGroupOrderBySortOrderAsc(group)).thenReturn(List.of(category));
+        when(accountRepository.existsByCcPaymentCategoryId(categoryId)).thenReturn(true);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+            () -> categoryService.deleteGroup(groupId, USER_SUB));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        verify(categoryGroupRepository, never()).deleteById(any());
     }
 }
