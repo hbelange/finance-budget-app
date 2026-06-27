@@ -53,38 +53,51 @@
             <div class="group-drag-preview">{{ group.name }}</div>
           </ng-template>
 
-          <table class="category-table">
-            <thead>
-              <tr>
-                <th class="col-drag"></th>
-                <th class="col-name">Category</th>
-                <th class="col-number">Assigned</th>
-                <th class="col-number">Spent</th>
-                <th class="col-number">Available</th>
-                <th class="col-actions"></th>
-              </tr>
-            </thead>
-            <tbody
-              cdkDropList
-              [cdkDropListData]="group.categories"
-              cdkDropListLockAxis="y"
-              (cdkDropListDropped)="onCategoryDrop(group, $event)"
-            >
-              @for (cat of group.categories; track cat.id) {
-                <tr cdkDrag [cdkDragData]="cat" [cdkDragDisabled]="cat.systemManaged">
-                  <td class="col-drag">
-                    @if (!cat.systemManaged) {
+          @if (isSystemManagedGroup(group)) {
+            <table class="category-table">
+              <thead>
+                <tr>
+                  <th class="col-name">Credit Card</th>
+                  <th class="col-number">Owed</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (cat of group.categories; track cat.id) {
+                  <tr>
+                    <td class="col-name">{{ cat.name }}</td>
+                    <td class="col-number col-owed" [class.positive]="cat.available >= 0" [class.negative]="cat.available < 0">
+                      {{ cat.available | currency }}
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          } @else {
+            <table class="category-table">
+              <thead>
+                <tr>
+                  <th class="col-drag"></th>
+                  <th class="col-name">Category</th>
+                  <th class="col-number">Assigned</th>
+                  <th class="col-number">Spent</th>
+                  <th class="col-number">Available</th>
+                  <th class="col-actions"></th>
+                </tr>
+              </thead>
+              <tbody
+                cdkDropList
+                [cdkDropListData]="group.categories"
+                cdkDropListLockAxis="y"
+                (cdkDropListDropped)="onCategoryDrop(group, $event)"
+              >
+                @for (cat of group.categories; track cat.id) {
+                  <tr cdkDrag [cdkDragData]="cat">
+                    <td class="col-drag">
                       <span cdkDragHandle class="drag-handle" aria-label="Drag to reorder category">
                         <mat-icon>drag_indicator</mat-icon>
                       </span>
-                    }
-                  </td>
-                  <td class="col-name">{{ cat.name }}</td>
-                  @if (cat.systemManaged) {
-                    <td class="col-number col-owed" colspan="3">
-                      Owed: {{ cat.available | currency }}
                     </td>
-                  } @else {
+                    <td class="col-name">{{ cat.name }}</td>
                     <td class="col-number col-assigned">
                       <input
                         class="assigned-input"
@@ -100,12 +113,10 @@
                     <td class="col-number col-available" [class.positive]="cat.available >= 0" [class.negative]="cat.available < 0">
                       {{ cat.available | currency }}
                     </td>
-                  }
-                  <ng-template cdkDragPreview>
-                    <div class="category-drag-preview">{{ cat.name }}</div>
-                  </ng-template>
-                  <td class="col-actions">
-                    @if (!cat.systemManaged) {
+                    <ng-template cdkDragPreview>
+                      <div class="category-drag-preview">{{ cat.name }}</div>
+                    </ng-template>
+                    <td class="col-actions">
                       <button mat-icon-button [attr.aria-label]="'Rename ' + cat.name"
                         (click)="openRenameCategory(cat)">
                         <mat-icon>edit</mat-icon>
@@ -114,12 +125,12 @@
                         (click)="confirmDeleteCategory(cat)">
                         <mat-icon>delete</mat-icon>
                       </button>
-                    }
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
         </mat-expansion-panel>
       }
     </div>
