@@ -21,6 +21,7 @@ import com.hbelange.financebudgetapp.dto.BudgetCategoryViewDTO;
 import com.hbelange.financebudgetapp.dto.BudgetGroupDTO;
 import com.hbelange.financebudgetapp.dto.BudgetViewDTO;
 import com.hbelange.financebudgetapp.dto.CategorySpent;
+import com.hbelange.financebudgetapp.repository.AccountRepository;
 import com.hbelange.financebudgetapp.repository.BudgetAllocationRepository;
 import com.hbelange.financebudgetapp.repository.BudgetCategoryRepository;
 import com.hbelange.financebudgetapp.repository.CategoryGroupRepository;
@@ -33,17 +34,20 @@ public class BudgetService {
     private final BudgetCategoryRepository budgetCategoryRepository;
     private final BudgetAllocationRepository budgetAllocationRepository;
     private final TransactionRepository transactionRepository;
+    private final AccountRepository accountRepository;
 
     @Autowired
     public BudgetService(
             CategoryGroupRepository categoryGroupRepository,
             BudgetCategoryRepository budgetCategoryRepository,
             BudgetAllocationRepository budgetAllocationRepository,
-            TransactionRepository transactionRepository) {
+            TransactionRepository transactionRepository,
+            AccountRepository accountRepository) {
         this.categoryGroupRepository = categoryGroupRepository;
         this.budgetCategoryRepository = budgetCategoryRepository;
         this.budgetAllocationRepository = budgetAllocationRepository;
         this.transactionRepository = transactionRepository;
+        this.accountRepository = accountRepository;
     }
 
     public BudgetViewDTO getBudget(String monthParam, String userSub) {
@@ -51,9 +55,16 @@ public class BudgetService {
         LocalDate firstDay = month.atDay(1);
         LocalDate lastDay = month.atEndOfMonth();
 
-        BigDecimal totalNet = transactionRepository.sumNetUpToDate(lastDay, userSub);
-        BigDecimal totalAssigned = budgetAllocationRepository.sumAssignedUpToMonth(firstDay, userSub);
-        BigDecimal readyToAssign = totalNet.subtract(totalAssigned);
+        // RTA = total income ever received (positive, non-transfer) minus total ever assigned.
+        // Global — no date cutoff — so it stays constant when switching months.
+        BigDecimal totalIncome = transactionRepository.sumRtaBase(userSub);
+        BigDecimal totalAssigned = budgetAllocationRepository.sumAllAssigned(userSub);
+        BigDecimal readyToAssign = totalIncome.subtract(totalAssigned);
+
+        Map<UUID, UUID> ccPaymentCategoryToAccount = accountRepository
+            .findByUserSubAndCcPaymentCategoryIdNotNull(userSub)
+            .stream()
+            .collect(Collectors.toMap(a -> a.getCcPaymentCategoryId(), a -> a.getId()));
 
         Map<UUID, BigDecimal> assignedByCategory = budgetAllocationRepository.findByMonthAndUserSub(firstDay, userSub)
             .stream().collect(Collectors.toMap(a -> a.getCategoryId(), a -> a.getAssigned()));
@@ -65,16 +76,28 @@ public class BudgetService {
             .map(g -> {
                 List<BudgetCategoryViewDTO> cats = budgetCategoryRepository
                     .findByGroupOrderBySortOrderAsc(g).stream()
-                    .map(c -> {
-                        BigDecimal assigned = assignedByCategory.getOrDefault(c.getId(), BigDecimal.ZERO);
-                        BigDecimal spent = spentByCategory.getOrDefault(c.getId(), BigDecimal.ZERO);
-                        BigDecimal available = assigned.add(spent);
-                        return new BudgetCategoryViewDTO(c.getId(), c.getName(), assigned, spent, available);
-                    }).collect(Collectors.toList());
+                    .map(c -> buildCategoryView(c, ccPaymentCategoryToAccount, assignedByCategory, spentByCategory, lastDay))
+                    .collect(Collectors.toList());
                 return new BudgetGroupDTO(g.getId(), g.getName(), cats);
             }).collect(Collectors.toList());
 
         return new BudgetViewDTO(readyToAssign, groups);
+    }
+
+    private BudgetCategoryViewDTO buildCategoryView(BudgetCategory c,
+            Map<UUID, UUID> ccPaymentCategoryToAccount,
+            Map<UUID, BigDecimal> assignedByCategory,
+            Map<UUID, BigDecimal> spentByCategory,
+            LocalDate lastDay) {
+        if (ccPaymentCategoryToAccount.containsKey(c.getId())) {
+            UUID accountId = ccPaymentCategoryToAccount.get(c.getId());
+            BigDecimal balance = transactionRepository.sumForAccount(accountId, lastDay);
+            BigDecimal owed = balance.negate().max(BigDecimal.ZERO);
+            return new BudgetCategoryViewDTO(c.getId(), c.getName(), BigDecimal.ZERO, BigDecimal.ZERO, owed, true);
+        }
+        BigDecimal assigned = assignedByCategory.getOrDefault(c.getId(), BigDecimal.ZERO);
+        BigDecimal spent = spentByCategory.getOrDefault(c.getId(), BigDecimal.ZERO);
+        return new BudgetCategoryViewDTO(c.getId(), c.getName(), assigned, spent, assigned.add(spent), false);
     }
 
     @Transactional

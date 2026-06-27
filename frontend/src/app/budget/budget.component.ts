@@ -59,6 +59,10 @@ export default class BudgetComponent {
     return group.categories.reduce((sum, c) => sum + c.assigned, 0);
   }
 
+  protected isSystemManagedGroup(group: BudgetGroup): boolean {
+    return group.categories.some(c => c.systemManaged);
+  }
+
   protected abs(n: number): number {
     return Math.abs(n);
   }
@@ -224,7 +228,7 @@ export default class BudgetComponent {
         this.categoryService.addCategory(group.id, name).subscribe({
           next: (categoryGroup) => this.budgetView.update(v => !v ? v : {
             ...v,
-            groups: v.groups.map(g => g.id === group.id ? { ...g, categories : [...g.categories, {...categoryGroup.categories.slice(-1)[0], assigned: 0, spent: 0, available: 0 } ] } : g)
+            groups: v.groups.map(g => g.id === group.id ? { ...g, categories : [...g.categories, {...categoryGroup.categories.slice(-1)[0], assigned: 0, spent: 0, available: 0, systemManaged: false } ] } : g)
           }),
           error: () => this.snackBar.open('Failed to create category.', 'OK', { duration: 5000 }),
         });

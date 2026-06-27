@@ -6,8 +6,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 
 import com.hbelange.financebudgetapp.entity.Account;
+import com.hbelange.financebudgetapp.entity.BudgetCategory;
+import com.hbelange.financebudgetapp.entity.CategoryGroup;
 import com.hbelange.financebudgetapp.entity.Transaction;
 import com.hbelange.financebudgetapp.enums.AccountType;
+import com.hbelange.financebudgetapp.repository.BudgetCategoryRepository;
+import com.hbelange.financebudgetapp.repository.CategoryGroupRepository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -16,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 @DataJpaTest
 class AccountRepositoryTest {
@@ -25,6 +30,12 @@ class AccountRepositoryTest {
 
     @Autowired
     private TransactionRepository transactionRepository;
+
+    @Autowired
+    private CategoryGroupRepository categoryGroupRepository;
+
+    @Autowired
+    private BudgetCategoryRepository budgetCategoryRepository;
 
     private Account account;
 
@@ -149,6 +160,72 @@ class AccountRepositoryTest {
 
         saveTransaction(otherAccount, "50.00");
         assertFalse(accountRepository.existsTransactionsByAccountId(account.getId()));
+    }
+
+    // --- findByUserSubAndCcPaymentCategoryIdNotNull ---
+
+    @Test
+    void findByUserSubAndCcPaymentCategoryIdNotNull_returnsOnlyLinkedAccounts() {
+        CategoryGroup group = new CategoryGroup();
+        group.setName("Credit Card Payments");
+        group.setSortOrder(99);
+        group.setUserSub("auth0|test-user");
+        group = categoryGroupRepository.save(group);
+
+        BudgetCategory cat = new BudgetCategory();
+        cat.setGroup(group);
+        cat.setName("My Visa");
+        cat.setSortOrder(0);
+        cat = budgetCategoryRepository.save(cat);
+
+        Account cc = new Account();
+        cc.setName("My Visa");
+        cc.setType(AccountType.CREDIT_CARD);
+        cc.setUserSub("auth0|test-user");
+        cc.setCcPaymentCategoryId(cat.getId());
+        cc = accountRepository.save(cc);
+
+        List<Account> result = accountRepository.findByUserSubAndCcPaymentCategoryIdNotNull("auth0|test-user");
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getId()).isEqualTo(cc.getId());
+    }
+
+    @Test
+    void findByUserSubAndCcPaymentCategoryIdNotNull_excludesNonLinkedAccounts() {
+        List<Account> result = accountRepository.findByUserSubAndCcPaymentCategoryIdNotNull("auth0|test-user");
+        assertThat(result).isEmpty();
+    }
+
+    // --- existsByCcPaymentCategoryId ---
+
+    @Test
+    void existsByCcPaymentCategoryId_returnsTrueWhenLinked() {
+        CategoryGroup group = new CategoryGroup();
+        group.setName("Credit Card Payments");
+        group.setSortOrder(99);
+        group.setUserSub("auth0|test-user");
+        group = categoryGroupRepository.save(group);
+
+        BudgetCategory cat = new BudgetCategory();
+        cat.setGroup(group);
+        cat.setName("My Visa");
+        cat.setSortOrder(0);
+        cat = budgetCategoryRepository.save(cat);
+
+        Account cc = new Account();
+        cc.setName("My Visa");
+        cc.setType(AccountType.CREDIT_CARD);
+        cc.setUserSub("auth0|test-user");
+        cc.setCcPaymentCategoryId(cat.getId());
+        accountRepository.save(cc);
+
+        assertTrue(accountRepository.existsByCcPaymentCategoryId(cat.getId()));
+    }
+
+    @Test
+    void existsByCcPaymentCategoryId_returnsFalseWhenNotLinked() {
+        assertFalse(accountRepository.existsByCcPaymentCategoryId(UUID.randomUUID()));
     }
 
     private Transaction saveTransaction(Account acct, String amount) {

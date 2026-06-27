@@ -19,8 +19,8 @@ public interface BudgetAllocationRepository extends JpaRepository<BudgetAllocati
     @Query("SELECT ba FROM BudgetAllocation ba WHERE ba.month = :month AND ba.categoryId IN (SELECT bc.id FROM BudgetCategory bc WHERE bc.group.userSub = :userSub)")
     List<BudgetAllocation> findByMonthAndUserSub(@Param("month") LocalDate month, @Param("userSub") String userSub);
 
-    @Query("SELECT COALESCE(SUM(ba.assigned), 0) FROM BudgetAllocation ba WHERE ba.month <= :firstDayOfMonth AND ba.categoryId IN (SELECT bc.id FROM BudgetCategory bc WHERE bc.group.userSub = :userSub)")
-    BigDecimal sumAssignedUpToMonth(@Param("firstDayOfMonth") LocalDate firstDayOfMonth, @Param("userSub") String userSub);
+    @Query("SELECT COALESCE(SUM(ba.assigned), 0) FROM BudgetAllocation ba WHERE ba.categoryId IN (SELECT bc.id FROM BudgetCategory bc WHERE bc.group.userSub = :userSub)")
+    BigDecimal sumAllAssigned(@Param("userSub") String userSub);
 
     @Modifying
     @Query(nativeQuery = true, value = """

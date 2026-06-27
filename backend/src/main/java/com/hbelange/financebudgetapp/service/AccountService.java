@@ -13,16 +13,19 @@ import com.hbelange.financebudgetapp.dto.AccountBalance;
 import com.hbelange.financebudgetapp.dto.AccountDTO;
 import com.hbelange.financebudgetapp.dto.AccountRequest;
 import com.hbelange.financebudgetapp.entity.Account;
+import com.hbelange.financebudgetapp.enums.AccountType;
 import com.hbelange.financebudgetapp.repository.AccountRepository;
 
 @Service
 public class AccountService {
-    
+
     private final AccountRepository accountRepository;
-    
+    private final CreditCardService creditCardService;
+
     @Autowired
-    public AccountService(AccountRepository accountRepository) {
+    public AccountService(AccountRepository accountRepository, CreditCardService creditCardService) {
         this.accountRepository = accountRepository;
+        this.creditCardService = creditCardService;
     }
 
     public List<AccountDTO> findAll(String userSub) {
@@ -45,7 +48,11 @@ public class AccountService {
         account.setName(req.name());
         account.setType(req.type());
         account.setUserSub(userSub);
-        return toDTO(accountRepository.save(account), BigDecimal.ZERO);
+        Account saved = accountRepository.save(account);
+        if (saved.getType() == AccountType.CREDIT_CARD) {
+            creditCardService.ensureCCPaymentCategory(saved, userSub);
+        }
+        return toDTO(saved, BigDecimal.ZERO);
     }
 
     public AccountDTO update(UUID id, AccountRequest req, String userSub) {
@@ -55,9 +62,25 @@ public class AccountService {
         if (!account.getUserSub().equals(userSub)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have permission to update this account");
         }
+
+        AccountType oldType = account.getType();
+        String oldName = account.getName();
+
+        if (oldType == AccountType.CREDIT_CARD && req.type() != AccountType.CREDIT_CARD) {
+            creditCardService.deleteCCPaymentCategory(account);
+        }
+
         account.setName(req.name());
         account.setType(req.type());
-        return toDTO(accountRepository.save(account), accountRepository.findBalanceById(id));
+        Account saved = accountRepository.save(account);
+
+        if (oldType != AccountType.CREDIT_CARD && req.type() == AccountType.CREDIT_CARD) {
+            creditCardService.ensureCCPaymentCategory(saved, userSub);
+        } else if (req.type() == AccountType.CREDIT_CARD && !oldName.equals(req.name())) {
+            creditCardService.syncCategoryName(saved);
+        }
+
+        return toDTO(saved, accountRepository.findBalanceById(id));
     }
 
     public void delete(UUID id, String userSub) {
@@ -70,6 +93,9 @@ public class AccountService {
 
         if (accountRepository.existsTransactionsByAccountId(id)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Account has existing transactions");
+        }
+        if (account.getType() == AccountType.CREDIT_CARD) {
+            creditCardService.deleteCCPaymentCategory(account);
         }
         accountRepository.deleteById(id);
     }
