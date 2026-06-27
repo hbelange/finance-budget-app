@@ -59,6 +59,10 @@ export default class BudgetComponent {
     return group.categories.reduce((sum, c) => sum + c.assigned, 0);
   }
 
+  protected isSystemManagedGroup(group: BudgetGroup): boolean {
+    return group.categories.some(c => c.systemManaged);
+  }
+
   protected abs(n: number): number {
     return Math.abs(n);
   }

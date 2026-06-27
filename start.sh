@@ -50,7 +50,7 @@ echo "Spring Boot started (PID $SPRING_PID)."
 # --- Angular ---
 echo "Starting Angular..."
 cd "$ROOT/frontend"
-npx ng serve &
+npx ng serve -c development &
 ANGULAR_PID=$!
 echo "$ANGULAR_PID" > "$ROOT/.frontend.pid"
 

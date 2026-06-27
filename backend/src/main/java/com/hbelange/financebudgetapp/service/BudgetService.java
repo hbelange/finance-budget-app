@@ -55,9 +55,11 @@ public class BudgetService {
         LocalDate firstDay = month.atDay(1);
         LocalDate lastDay = month.atEndOfMonth();
 
-        BigDecimal totalNet = transactionRepository.sumNetExcludingCCPurchases(lastDay, userSub);
-        BigDecimal totalAssigned = budgetAllocationRepository.sumAssignedUpToMonth(firstDay, userSub);
-        BigDecimal readyToAssign = totalNet.subtract(totalAssigned);
+        // RTA = total income ever received (positive, non-transfer) minus total ever assigned.
+        // Global — no date cutoff — so it stays constant when switching months.
+        BigDecimal totalIncome = transactionRepository.sumRtaBase(userSub);
+        BigDecimal totalAssigned = budgetAllocationRepository.sumAllAssigned(userSub);
+        BigDecimal readyToAssign = totalIncome.subtract(totalAssigned);
 
         Map<UUID, UUID> ccPaymentCategoryToAccount = accountRepository
             .findByUserSubAndCcPaymentCategoryIdNotNull(userSub)
