@@ -36,4 +36,7 @@ public class Account {
 
     @Column(nullable = false, name = "user_sub")
     private String userSub;
+
+    @Column(name = "cc_payment_category_id")
+    private UUID ccPaymentCategoryId;
 }
