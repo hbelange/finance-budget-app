@@ -20,6 +20,7 @@ import com.hbelange.financebudgetapp.entity.BudgetCategory;
 import com.hbelange.financebudgetapp.dto.BudgetCategoryViewDTO;
 import com.hbelange.financebudgetapp.dto.BudgetGroupDTO;
 import com.hbelange.financebudgetapp.dto.BudgetViewDTO;
+import com.hbelange.financebudgetapp.dto.CategoryAssigned;
 import com.hbelange.financebudgetapp.dto.CategorySpent;
 import com.hbelange.financebudgetapp.repository.AccountRepository;
 import com.hbelange.financebudgetapp.repository.BudgetAllocationRepository;
@@ -72,11 +73,20 @@ public class BudgetService {
         Map<UUID, BigDecimal> spentByCategory = transactionRepository.findSpentByCategoryForMonth(firstDay, lastDay, userSub)
             .stream().collect(Collectors.toMap(CategorySpent::categoryId, CategorySpent::spent));
 
+        // "Available" carries a category's leftover balance forward, so it's the running total of
+        // assigned + spent across all months up to and including M — not just this month's activity.
+        Map<UUID, BigDecimal> cumulativeAssignedByCategory = budgetAllocationRepository.sumAssignedByCategoryThroughMonth(lastDay, userSub)
+            .stream().collect(Collectors.toMap(CategoryAssigned::categoryId, CategoryAssigned::assigned));
+
+        Map<UUID, BigDecimal> cumulativeSpentByCategory = transactionRepository.sumSpentByCategoryThroughMonth(lastDay, userSub)
+            .stream().collect(Collectors.toMap(CategorySpent::categoryId, CategorySpent::spent));
+
         List<BudgetGroupDTO> groups = categoryGroupRepository.findAllByUserSubOrderBySortOrderAsc(userSub).stream()
             .map(g -> {
                 List<BudgetCategoryViewDTO> cats = budgetCategoryRepository
                     .findByGroupOrderBySortOrderAsc(g).stream()
-                    .map(c -> buildCategoryView(c, ccPaymentCategoryToAccount, assignedByCategory, spentByCategory, lastDay))
+                    .map(c -> buildCategoryView(c, ccPaymentCategoryToAccount, assignedByCategory, spentByCategory,
+                        cumulativeAssignedByCategory, cumulativeSpentByCategory, lastDay))
                     .collect(Collectors.toList());
                 return new BudgetGroupDTO(g.getId(), g.getName(), cats);
             }).collect(Collectors.toList());
@@ -88,6 +98,8 @@ public class BudgetService {
             Map<UUID, UUID> ccPaymentCategoryToAccount,
             Map<UUID, BigDecimal> assignedByCategory,
             Map<UUID, BigDecimal> spentByCategory,
+            Map<UUID, BigDecimal> cumulativeAssignedByCategory,
+            Map<UUID, BigDecimal> cumulativeSpentByCategory,
             LocalDate lastDay) {
         if (ccPaymentCategoryToAccount.containsKey(c.getId())) {
             UUID accountId = ccPaymentCategoryToAccount.get(c.getId());
@@ -97,7 +109,10 @@ public class BudgetService {
         }
         BigDecimal assigned = assignedByCategory.getOrDefault(c.getId(), BigDecimal.ZERO);
         BigDecimal spent = spentByCategory.getOrDefault(c.getId(), BigDecimal.ZERO);
-        return new BudgetCategoryViewDTO(c.getId(), c.getName(), assigned, spent, assigned.add(spent), false);
+        BigDecimal cumulativeAssigned = cumulativeAssignedByCategory.getOrDefault(c.getId(), BigDecimal.ZERO);
+        BigDecimal cumulativeSpent = cumulativeSpentByCategory.getOrDefault(c.getId(), BigDecimal.ZERO);
+        BigDecimal available = cumulativeAssigned.add(cumulativeSpent);
+        return new BudgetCategoryViewDTO(c.getId(), c.getName(), assigned, spent, available, false);
     }
 
     @Transactional
