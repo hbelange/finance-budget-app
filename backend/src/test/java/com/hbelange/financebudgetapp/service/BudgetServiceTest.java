@@ -22,6 +22,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.hbelange.financebudgetapp.dto.AllocationRequest;
 import com.hbelange.financebudgetapp.dto.BudgetViewDTO;
+import com.hbelange.financebudgetapp.dto.CategoryAssigned;
 import com.hbelange.financebudgetapp.dto.CategorySpent;
 import com.hbelange.financebudgetapp.entity.Account;
 import com.hbelange.financebudgetapp.entity.BudgetAllocation;
@@ -112,6 +113,10 @@ class BudgetServiceTest {
         when(budgetAllocationRepository.findByMonthAndUserSub(any(), any())).thenReturn(List.of(allocation));
         when(transactionRepository.findSpentByCategoryForMonth(any(), any(), any()))
             .thenReturn(List.of(new CategorySpent(categoryId, new BigDecimal("-200.00"))));
+        when(budgetAllocationRepository.sumAssignedByCategoryThroughMonth(any(), any()))
+            .thenReturn(List.of(new CategoryAssigned(categoryId, new BigDecimal("500.00"))));
+        when(transactionRepository.sumSpentByCategoryThroughMonth(any(), any()))
+            .thenReturn(List.of(new CategorySpent(categoryId, new BigDecimal("-200.00"))));
         when(accountRepository.findByUserSubAndCcPaymentCategoryIdNotNull(USER_SUB)).thenReturn(List.of());
         when(categoryGroupRepository.findAllByUserSubOrderBySortOrderAsc(USER_SUB)).thenReturn(List.of(group));
         when(budgetCategoryRepository.findByGroupOrderBySortOrderAsc(group)).thenReturn(List.of(category));
@@ -130,6 +135,8 @@ class BudgetServiceTest {
         when(budgetAllocationRepository.sumAllAssigned(any())).thenReturn(BigDecimal.ZERO);
         when(budgetAllocationRepository.findByMonthAndUserSub(any(), any())).thenReturn(List.of());
         when(transactionRepository.findSpentByCategoryForMonth(any(), any(), any())).thenReturn(List.of());
+        when(budgetAllocationRepository.sumAssignedByCategoryThroughMonth(any(), any())).thenReturn(List.of());
+        when(transactionRepository.sumSpentByCategoryThroughMonth(any(), any())).thenReturn(List.of());
         when(accountRepository.findByUserSubAndCcPaymentCategoryIdNotNull(USER_SUB)).thenReturn(List.of());
         when(categoryGroupRepository.findAllByUserSubOrderBySortOrderAsc(USER_SUB)).thenReturn(List.of(group));
         when(budgetCategoryRepository.findByGroupOrderBySortOrderAsc(group)).thenReturn(List.of(category));
@@ -252,5 +259,53 @@ class BudgetServiceTest {
 
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
         verify(budgetAllocationRepository, never()).upsert(any(), any(), any());
+    }
+
+    @Test
+    void availableForCategoryOfPreviousMonth_shouldCarryOver_forNextMonth() {
+        BudgetAllocation allocation = new BudgetAllocation();
+        allocation.setCategoryId(categoryId);
+        allocation.setMonth(LocalDate.of(2026, 5, 1));
+        allocation.setAssigned(new BigDecimal("500.00"));
+
+        when(transactionRepository.sumRtaBase(any())).thenReturn(BigDecimal.ZERO);
+        when(budgetAllocationRepository.sumAllAssigned(any())).thenReturn(BigDecimal.ZERO);
+
+        // May: allocation assigned + spending both happen in May only.
+        when(budgetAllocationRepository.findByMonthAndUserSub(eq(LocalDate.of(2026, 5, 1)), any()))
+            .thenReturn(List.of(allocation));
+        when(transactionRepository.findSpentByCategoryForMonth(
+                eq(LocalDate.of(2026, 5, 1)), eq(LocalDate.of(2026, 5, 31)), any()))
+            .thenReturn(List.of(new CategorySpent(categoryId, new BigDecimal("-200.00"))));
+
+        // June: no new allocation, no new spending — only carried-over available should remain.
+        when(budgetAllocationRepository.findByMonthAndUserSub(eq(LocalDate.of(2026, 6, 1)), any()))
+            .thenReturn(List.of());
+        when(transactionRepository.findSpentByCategoryForMonth(
+                eq(LocalDate.of(2026, 6, 1)), eq(LocalDate.of(2026, 6, 30)), any()))
+            .thenReturn(List.of());
+
+        // Cumulative-through-month totals: the May allocation/transaction still fall within both
+        // the "through May" and "through June" windows, since neither bound has a lower limit.
+        when(budgetAllocationRepository.sumAssignedByCategoryThroughMonth(eq(LocalDate.of(2026, 5, 31)), any()))
+            .thenReturn(List.of(new CategoryAssigned(categoryId, new BigDecimal("500.00"))));
+        when(budgetAllocationRepository.sumAssignedByCategoryThroughMonth(eq(LocalDate.of(2026, 6, 30)), any()))
+            .thenReturn(List.of(new CategoryAssigned(categoryId, new BigDecimal("500.00"))));
+        when(transactionRepository.sumSpentByCategoryThroughMonth(eq(LocalDate.of(2026, 5, 31)), any()))
+            .thenReturn(List.of(new CategorySpent(categoryId, new BigDecimal("-200.00"))));
+        when(transactionRepository.sumSpentByCategoryThroughMonth(eq(LocalDate.of(2026, 6, 30)), any()))
+            .thenReturn(List.of(new CategorySpent(categoryId, new BigDecimal("-200.00"))));
+
+        when(accountRepository.findByUserSubAndCcPaymentCategoryIdNotNull(USER_SUB)).thenReturn(List.of());
+        when(categoryGroupRepository.findAllByUserSubOrderBySortOrderAsc(USER_SUB)).thenReturn(List.of(group));
+        when(budgetCategoryRepository.findByGroupOrderBySortOrderAsc(group)).thenReturn(List.of(category));
+
+        BudgetViewDTO resultMay = budgetService.getBudget("2026-05", USER_SUB);
+        var catMay = resultMay.groups().get(0).categories().get(0);
+        assertEquals(new BigDecimal("300.00"), catMay.available());
+
+        BudgetViewDTO resultJune = budgetService.getBudget("2026-06", USER_SUB);
+        var catJune = resultJune.groups().get(0).categories().get(0);
+        assertEquals(new BigDecimal("300.00"), catJune.available());
     }
 }
