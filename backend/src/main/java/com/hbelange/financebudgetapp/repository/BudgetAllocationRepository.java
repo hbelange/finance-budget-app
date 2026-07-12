@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import com.hbelange.financebudgetapp.dto.CategoryAssigned;
 import com.hbelange.financebudgetapp.entity.BudgetAllocation;
 
 @Repository
@@ -18,6 +19,9 @@ public interface BudgetAllocationRepository extends JpaRepository<BudgetAllocati
 
     @Query("SELECT ba FROM BudgetAllocation ba WHERE ba.month = :month AND ba.categoryId IN (SELECT bc.id FROM BudgetCategory bc WHERE bc.group.userSub = :userSub)")
     List<BudgetAllocation> findByMonthAndUserSub(@Param("month") LocalDate month, @Param("userSub") String userSub);
+
+    @Query("SELECT NEW com.hbelange.financebudgetapp.dto.CategoryAssigned(ba.categoryId, COALESCE(SUM(ba.assigned), 0)) FROM BudgetAllocation ba WHERE ba.month <= :month AND ba.categoryId IN (SELECT bc.id FROM BudgetCategory bc WHERE bc.group.userSub = :userSub) GROUP BY ba.categoryId")
+    List<CategoryAssigned> sumAssignedByCategoryThroughMonth(@Param("month") LocalDate month, @Param("userSub") String userSub);
 
     @Query("SELECT COALESCE(SUM(ba.assigned), 0) FROM BudgetAllocation ba WHERE ba.categoryId IN (SELECT bc.id FROM BudgetCategory bc WHERE bc.group.userSub = :userSub)")
     BigDecimal sumAllAssigned(@Param("userSub") String userSub);
