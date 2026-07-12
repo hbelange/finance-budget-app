@@ -74,8 +74,8 @@ class BudgetServiceTest {
 
     @Test
     void getBudget_returnsCorrectReadyToAssign() {
-        when(transactionRepository.sumNetExcludingCCPurchases(any(), any())).thenReturn(new BigDecimal("1000.00"));
-        when(budgetAllocationRepository.sumAssignedUpToMonth(any(), any())).thenReturn(new BigDecimal("600.00"));
+        when(transactionRepository.sumRtaBase(any())).thenReturn(new BigDecimal("1000.00"));
+        when(budgetAllocationRepository.sumAllAssigned(any())).thenReturn(new BigDecimal("600.00"));
         when(budgetAllocationRepository.findByMonthAndUserSub(any(), any())).thenReturn(List.of());
         when(transactionRepository.findSpentByCategoryForMonth(any(), any(), any())).thenReturn(List.of());
         when(accountRepository.findByUserSubAndCcPaymentCategoryIdNotNull(USER_SUB)).thenReturn(List.of());
@@ -88,8 +88,8 @@ class BudgetServiceTest {
 
     @Test
     void getBudget_readyToAssignIsNegative_whenOverAssigned() {
-        when(transactionRepository.sumNetExcludingCCPurchases(any(), any())).thenReturn(new BigDecimal("500.00"));
-        when(budgetAllocationRepository.sumAssignedUpToMonth(any(), any())).thenReturn(new BigDecimal("800.00"));
+        when(transactionRepository.sumRtaBase(any())).thenReturn(new BigDecimal("500.00"));
+        when(budgetAllocationRepository.sumAllAssigned(any())).thenReturn(new BigDecimal("800.00"));
         when(budgetAllocationRepository.findByMonthAndUserSub(any(), any())).thenReturn(List.of());
         when(transactionRepository.findSpentByCategoryForMonth(any(), any(), any())).thenReturn(List.of());
         when(accountRepository.findByUserSubAndCcPaymentCategoryIdNotNull(USER_SUB)).thenReturn(List.of());
@@ -107,8 +107,8 @@ class BudgetServiceTest {
         allocation.setMonth(LocalDate.of(2026, 5, 1));
         allocation.setAssigned(new BigDecimal("500.00"));
 
-        when(transactionRepository.sumNetExcludingCCPurchases(any(), any())).thenReturn(BigDecimal.ZERO);
-        when(budgetAllocationRepository.sumAssignedUpToMonth(any(), any())).thenReturn(BigDecimal.ZERO);
+        when(transactionRepository.sumRtaBase(any())).thenReturn(BigDecimal.ZERO);
+        when(budgetAllocationRepository.sumAllAssigned(any())).thenReturn(BigDecimal.ZERO);
         when(budgetAllocationRepository.findByMonthAndUserSub(any(), any())).thenReturn(List.of(allocation));
         when(transactionRepository.findSpentByCategoryForMonth(any(), any(), any()))
             .thenReturn(List.of(new CategorySpent(categoryId, new BigDecimal("-200.00"))));
@@ -126,8 +126,8 @@ class BudgetServiceTest {
 
     @Test
     void getBudget_returnsZeroAvailable_whenNoAllocationOrSpending() {
-        when(transactionRepository.sumNetExcludingCCPurchases(any(), any())).thenReturn(BigDecimal.ZERO);
-        when(budgetAllocationRepository.sumAssignedUpToMonth(any(), any())).thenReturn(BigDecimal.ZERO);
+        when(transactionRepository.sumRtaBase(any())).thenReturn(BigDecimal.ZERO);
+        when(budgetAllocationRepository.sumAllAssigned(any())).thenReturn(BigDecimal.ZERO);
         when(budgetAllocationRepository.findByMonthAndUserSub(any(), any())).thenReturn(List.of());
         when(transactionRepository.findSpentByCategoryForMonth(any(), any(), any())).thenReturn(List.of());
         when(accountRepository.findByUserSubAndCcPaymentCategoryIdNotNull(USER_SUB)).thenReturn(List.of());
@@ -160,8 +160,8 @@ class BudgetServiceTest {
         ccAccount.setUserSub(USER_SUB);
         ccAccount.setCcPaymentCategoryId(categoryId);
 
-        when(transactionRepository.sumNetExcludingCCPurchases(any(), any())).thenReturn(BigDecimal.ZERO);
-        when(budgetAllocationRepository.sumAssignedUpToMonth(any(), any())).thenReturn(BigDecimal.ZERO);
+        when(transactionRepository.sumRtaBase(any())).thenReturn(BigDecimal.ZERO);
+        when(budgetAllocationRepository.sumAllAssigned(any())).thenReturn(BigDecimal.ZERO);
         when(budgetAllocationRepository.findByMonthAndUserSub(any(), any())).thenReturn(List.of());
         when(transactionRepository.findSpentByCategoryForMonth(any(), any(), any())).thenReturn(List.of());
         when(accountRepository.findByUserSubAndCcPaymentCategoryIdNotNull(USER_SUB))
@@ -190,8 +190,8 @@ class BudgetServiceTest {
         ccAccount.setUserSub(USER_SUB);
         ccAccount.setCcPaymentCategoryId(categoryId);
 
-        when(transactionRepository.sumNetExcludingCCPurchases(any(), any())).thenReturn(BigDecimal.ZERO);
-        when(budgetAllocationRepository.sumAssignedUpToMonth(any(), any())).thenReturn(BigDecimal.ZERO);
+        when(transactionRepository.sumRtaBase(any())).thenReturn(BigDecimal.ZERO);
+        when(budgetAllocationRepository.sumAllAssigned(any())).thenReturn(BigDecimal.ZERO);
         when(budgetAllocationRepository.findByMonthAndUserSub(any(), any())).thenReturn(List.of());
         when(transactionRepository.findSpentByCategoryForMonth(any(), any(), any())).thenReturn(List.of());
         when(accountRepository.findByUserSubAndCcPaymentCategoryIdNotNull(USER_SUB))
@@ -210,8 +210,8 @@ class BudgetServiceTest {
 
     @Test
     void getBudget_systemManaged_falseForNormalCategories() {
-        when(transactionRepository.sumNetExcludingCCPurchases(any(), any())).thenReturn(BigDecimal.ZERO);
-        when(budgetAllocationRepository.sumAssignedUpToMonth(any(), any())).thenReturn(BigDecimal.ZERO);
+        when(transactionRepository.sumRtaBase(any())).thenReturn(BigDecimal.ZERO);
+        when(budgetAllocationRepository.sumAllAssigned(any())).thenReturn(BigDecimal.ZERO);
         when(budgetAllocationRepository.findByMonthAndUserSub(any(), any())).thenReturn(List.of());
         when(transactionRepository.findSpentByCategoryForMonth(any(), any(), any())).thenReturn(List.of());
         when(accountRepository.findByUserSubAndCcPaymentCategoryIdNotNull(USER_SUB)).thenReturn(List.of());
