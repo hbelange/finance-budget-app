@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, viewChild } from 
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Router, NavigationEnd, RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
-import { filter, map, startWith, catchError, of, switchMap, take, tap } from 'rxjs';
+import { filter, map, startWith, catchError, of, retry, switchMap, take, tap } from 'rxjs';
 import { MatSidenavContainer, MatSidenav, MatSidenavContent } from '@angular/material/sidenav';
 import { MatToolbar } from '@angular/material/toolbar';
 import { MatNavList, MatListItem } from '@angular/material/list';
@@ -82,6 +82,7 @@ export class App {
       take(1),
       switchMap(() =>
         this.http.get<DateBounds>('/api/transactions/date-bounds').pipe(
+          retry({ count: 2, delay: 1000 }),
           catchError(() => of({ first: null, last: null }))
         )
       )

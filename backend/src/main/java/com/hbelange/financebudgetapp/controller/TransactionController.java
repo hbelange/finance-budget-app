@@ -70,7 +70,7 @@ public class TransactionController {
     }
 
     @GetMapping("/date-bounds")
-    public TransactionDateBoundsDto getDateBounds() {
-        return transactionService.getDateBounds();
+    public TransactionDateBoundsDto getDateBounds(@AuthenticationPrincipal Jwt jwt) {
+        return transactionService.getDateBounds(jwt.getSubject());
     }
 }
