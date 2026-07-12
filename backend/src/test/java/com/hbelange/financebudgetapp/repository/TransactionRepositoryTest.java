@@ -315,6 +315,58 @@ class TransactionRepositoryTest {
         assertThat(result).isEqualByComparingTo(BigDecimal.ZERO);
     }
 
+    // --- findMinDate / findMaxDate ---
+
+    @Test
+    void findMinDate_returnsEarliestDateForUser() {
+        LocalDate result = transactionRepository.findMinDate("auth0|test-user");
+        assertThat(result).isEqualTo(LocalDate.of(2026, 1, 1));
+    }
+
+    @Test
+    void findMaxDate_returnsLatestDateForUser() {
+        LocalDate result = transactionRepository.findMaxDate("auth0|test-user");
+        assertThat(result).isEqualTo(LocalDate.of(2026, 2, 5));
+    }
+
+    @Test
+    void findMinDate_returnsNull_forUnknownUser() {
+        LocalDate result = transactionRepository.findMinDate("auth0|unknown");
+        assertThat(result).isNull();
+    }
+
+    @Test
+    void findMaxDate_returnsNull_forUnknownUser() {
+        LocalDate result = transactionRepository.findMaxDate("auth0|unknown");
+        assertThat(result).isNull();
+    }
+
+    @Test
+    void findMinDate_excludesOtherUsersEarlierTransactions() {
+        Account other = new Account();
+        other.setName("Other Account");
+        other.setType(AccountType.CHECKING);
+        other.setUserSub("auth0|other-user");
+        other = accountRepository.save(other);
+        saveTransaction(other, LocalDate.of(2025, 1, 1), "10.00");
+
+        LocalDate result = transactionRepository.findMinDate("auth0|test-user");
+        assertThat(result).isEqualTo(LocalDate.of(2026, 1, 1));
+    }
+
+    @Test
+    void findMaxDate_excludesOtherUsersLaterTransactions() {
+        Account other = new Account();
+        other.setName("Other Account");
+        other.setType(AccountType.CHECKING);
+        other.setUserSub("auth0|other-user");
+        other = accountRepository.save(other);
+        saveTransaction(other, LocalDate.of(2027, 1, 1), "10.00");
+
+        LocalDate result = transactionRepository.findMaxDate("auth0|test-user");
+        assertThat(result).isEqualTo(LocalDate.of(2026, 2, 5));
+    }
+
     private Transaction saveTransaction(Account acct, LocalDate date, String amount) {
         Transaction transaction = new Transaction();
         transaction.setAccount(acct);

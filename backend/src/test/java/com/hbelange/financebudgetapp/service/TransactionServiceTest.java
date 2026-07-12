@@ -12,6 +12,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
 import com.hbelange.financebudgetapp.dto.TransactionDTO;
+import com.hbelange.financebudgetapp.dto.TransactionDateBoundsDto;
 import com.hbelange.financebudgetapp.entity.Account;
 import com.hbelange.financebudgetapp.entity.Transaction;
 import com.hbelange.financebudgetapp.repository.AccountRepository;
@@ -278,5 +279,29 @@ class TransactionServiceTest {
             .satisfies(e -> assertThat(((ResponseStatusException) e).getStatusCode()).isEqualTo(HttpStatus.CONFLICT));
 
         verify(transactionRepository, never()).deleteById(any());
+    }
+
+    // --- getDateBounds ---
+
+    @Test
+    void getDateBounds_returnsPaddedFirstAndLast() {
+        when(transactionRepository.findMinDate(USER_SUB)).thenReturn(LocalDate.of(2026, 5, 15));
+        when(transactionRepository.findMaxDate(USER_SUB)).thenReturn(LocalDate.of(2026, 7, 3));
+
+        TransactionDateBoundsDto result = transactionService.getDateBounds(USER_SUB);
+
+        assertThat(result.first()).isEqualTo("2026-04");
+        assertThat(result.last()).isEqualTo("2026-08");
+    }
+
+    @Test
+    void getDateBounds_returnsNulls_whenUserHasNoTransactions() {
+        when(transactionRepository.findMinDate(USER_SUB)).thenReturn(null);
+        when(transactionRepository.findMaxDate(USER_SUB)).thenReturn(null);
+
+        TransactionDateBoundsDto result = transactionService.getDateBounds(USER_SUB);
+
+        assertThat(result.first()).isNull();
+        assertThat(result.last()).isNull();
     }
 }
