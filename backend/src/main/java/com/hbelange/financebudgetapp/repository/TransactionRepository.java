@@ -64,11 +64,11 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
     @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.account.id = :accountId AND t.date <= :lastDay")
     BigDecimal sumForAccount(@Param("accountId") UUID accountId, @Param("lastDay") LocalDate lastDay);
 
-    /** Returns null when the table is empty — expected behavior for an aggregate with no rows. */
-    @Query("SELECT MIN(t.date) FROM Transaction t")
-    LocalDate findMinDate();
+    /** Returns null when the user has no transactions — expected behavior for an aggregate with no rows. */
+    @Query("SELECT MIN(t.date) FROM Transaction t WHERE t.account.userSub = :userSub")
+    LocalDate findMinDate(@Param("userSub") String userSub);
 
-    /** Returns null when the table is empty — expected behavior for an aggregate with no rows. */
-    @Query("SELECT MAX(t.date) FROM Transaction t")
-    LocalDate findMaxDate();
+    /** Returns null when the user has no transactions — expected behavior for an aggregate with no rows. */
+    @Query("SELECT MAX(t.date) FROM Transaction t WHERE t.account.userSub = :userSub")
+    LocalDate findMaxDate(@Param("userSub") String userSub);
 }
