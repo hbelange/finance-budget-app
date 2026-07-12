@@ -104,9 +104,9 @@ public class TransactionService {
         transactionRepository.deleteById(id);
     }
 
-    public TransactionDateBoundsDto getDateBounds() {
-        LocalDate min = transactionRepository.findMinDate();
-        LocalDate max = transactionRepository.findMaxDate();
+    public TransactionDateBoundsDto getDateBounds(String userSub) {
+        LocalDate min = transactionRepository.findMinDate(userSub);
+        LocalDate max = transactionRepository.findMaxDate(userSub);
         String first = min != null ? YearMonth.from(min).minusMonths(1).toString() : null;
         String last = max != null ? YearMonth.from(max).plusMonths(1).toString() : null;
         return new TransactionDateBoundsDto(first, last);

@@ -13,6 +13,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.hbelange.financebudgetapp.dto.TransactionDTO;
+import com.hbelange.financebudgetapp.dto.TransactionDateBoundsDto;
 import com.hbelange.financebudgetapp.repository.UserRepository;
 import com.hbelange.financebudgetapp.service.TransactionService;
 
@@ -26,6 +27,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -218,5 +220,27 @@ class TransactionControllerTest {
 
         mockMvc.perform(delete("/api/transactions/" + TRANSACTION_ID).with(jwt()))
             .andExpect(status().isConflict());
+    }
+
+    // --- GET /api/transactions/date-bounds ---
+
+    @Test
+    void getDateBounds_returns200WithBounds() throws Exception {
+        when(transactionService.getDateBounds(any())).thenReturn(new TransactionDateBoundsDto("2026-04", "2026-08"));
+
+        mockMvc.perform(get("/api/transactions/date-bounds").with(jwt()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.first").value("2026-04"))
+            .andExpect(jsonPath("$.last").value("2026-08"));
+    }
+
+    @Test
+    void getDateBounds_passesJwtSubjectToService() throws Exception {
+        when(transactionService.getDateBounds(any())).thenReturn(new TransactionDateBoundsDto(null, null));
+
+        mockMvc.perform(get("/api/transactions/date-bounds").with(jwt()))
+            .andExpect(status().isOk());
+
+        verify(transactionService).getDateBounds(eq("user"));
     }
 }
