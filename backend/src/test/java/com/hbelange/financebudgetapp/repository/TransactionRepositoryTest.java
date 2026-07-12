@@ -244,64 +244,50 @@ class TransactionRepositoryTest {
         assertThat(result).isEmpty();
     }
 
-    // --- sumNetExcludingCCPurchases ---
+    // --- sumRtaBase ---
+    // Query: WHERE transferId IS NULL AND userSub = :userSub AND (amount > 0 OR categoryId IS NULL)
 
     @Test
-    void sumNetExcludingCCPurchases_includesNormalTransactions() {
-        // accountA (CHECKING): 50 + 100 - 30 = 120, through Jan 31 (excludes Feb accountB)
-        BigDecimal result = transactionRepository.sumNetExcludingCCPurchases(
-            LocalDate.of(2026, 1, 31), "auth0|test-user");
-        assertThat(result).isEqualByComparingTo("120.00");
+    void sumRtaBase_includesPositiveAndUncategorizedTransactions() {
+        // Setup: 50 + 100 (positive), -30 (negative, null category), 200 (positive) → all qualify
+        BigDecimal result = transactionRepository.sumRtaBase("auth0|test-user");
+        assertThat(result).isEqualByComparingTo("320.00");
     }
 
     @Test
-    void sumNetExcludingCCPurchases_excludesCCPurchasesWithCategory() {
+    void sumRtaBase_excludesCategorizedExpense() {
         UUID catId = UUID.randomUUID();
-        // CC transaction with category (expense) — must be excluded
-        Transaction ccPurchase = new Transaction();
-        ccPurchase.setAccount(ccAccount);
-        ccPurchase.setDate(LocalDate.of(2026, 1, 15));
-        ccPurchase.setAmount(new BigDecimal("-50.00"));
-        ccPurchase.setCategoryId(catId);
-        transactionRepository.save(ccPurchase);
+        Transaction expense = new Transaction();
+        expense.setAccount(accountA);
+        expense.setDate(LocalDate.of(2026, 1, 25));
+        expense.setAmount(new BigDecimal("-50.00"));
+        expense.setCategoryId(catId);
+        transactionRepository.save(expense);
 
-        BigDecimal result = transactionRepository.sumNetExcludingCCPurchases(
-            LocalDate.of(2026, 1, 31), "auth0|test-user");
-        // 120 from accountA; -50 CC purchase excluded → still 120
-        assertThat(result).isEqualByComparingTo("120.00");
+        // -50 has categoryId and is negative → excluded; total unchanged
+        BigDecimal result = transactionRepository.sumRtaBase("auth0|test-user");
+        assertThat(result).isEqualByComparingTo("320.00");
     }
 
     @Test
-    void sumNetExcludingCCPurchases_includesCCTransfersEvenWithCategory() {
-        UUID catId = UUID.randomUUID();
+    void sumRtaBase_excludesTransferTransactions() {
         UUID transferId = UUID.randomUUID();
-        // CC transaction WITH category AND transferId — transferId breaks the exclusion rule, so included
-        Transaction ccTransfer = new Transaction();
-        ccTransfer.setAccount(ccAccount);
-        ccTransfer.setDate(LocalDate.of(2026, 1, 20));
-        ccTransfer.setAmount(new BigDecimal("100.00"));
-        ccTransfer.setCategoryId(catId);
-        ccTransfer.setTransferId(transferId);
-        transactionRepository.save(ccTransfer);
+        Transaction transfer = new Transaction();
+        transfer.setAccount(accountA);
+        transfer.setDate(LocalDate.of(2026, 1, 25));
+        transfer.setAmount(new BigDecimal("200.00"));
+        transfer.setTransferId(transferId);
+        transactionRepository.save(transfer);
 
-        BigDecimal result = transactionRepository.sumNetExcludingCCPurchases(
-            LocalDate.of(2026, 1, 31), "auth0|test-user");
-        assertThat(result).isEqualByComparingTo("220.00"); // 120 + 100
+        // positive but has transferId → excluded; total unchanged
+        BigDecimal result = transactionRepository.sumRtaBase("auth0|test-user");
+        assertThat(result).isEqualByComparingTo("320.00");
     }
 
     @Test
-    void sumNetExcludingCCPurchases_includesCCTransactionWithoutCategory() {
-        // CC transaction with no category (e.g. a transfer leg) — NOT a CC purchase, so included
-        Transaction ccUncategorized = new Transaction();
-        ccUncategorized.setAccount(ccAccount);
-        ccUncategorized.setDate(LocalDate.of(2026, 1, 15));
-        ccUncategorized.setAmount(new BigDecimal("100.00"));
-        // no categoryId, no transferId
-        transactionRepository.save(ccUncategorized);
-
-        BigDecimal result = transactionRepository.sumNetExcludingCCPurchases(
-            LocalDate.of(2026, 1, 31), "auth0|test-user");
-        assertThat(result).isEqualByComparingTo("220.00"); // 120 + 100
+    void sumRtaBase_returnsZero_forUnknownUser() {
+        BigDecimal result = transactionRepository.sumRtaBase("auth0|unknown");
+        assertThat(result).isEqualByComparingTo(BigDecimal.ZERO);
     }
 
     // --- sumForAccount ---

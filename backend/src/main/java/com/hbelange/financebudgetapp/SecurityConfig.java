@@ -1,6 +1,7 @@
 package com.hbelange.financebudgetapp;
 
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -10,6 +11,10 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import java.util.List;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.hbelange.financebudgetapp.security.UserProvisioningFilter;
 
@@ -19,6 +24,9 @@ public class SecurityConfig {
 
     private final UserProvisioningFilter userProvisioningFilter;
 
+    @Value("${application.cors.allowed-origins}")
+    private List<String> allowedOrigins;
+
     @Autowired
     public SecurityConfig(UserProvisioningFilter userProvisioningFilter) {
         this.userProvisioningFilter = userProvisioningFilter;
@@ -27,6 +35,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(AbstractHttpConfigurer::disable)
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/health").permitAll()
@@ -47,5 +56,17 @@ public class SecurityConfig {
             )
             .addFilterAfter(userProvisioningFilter, BearerTokenAuthenticationFilter.class);
         return http.build();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(allowedOrigins);
+        configuration.addAllowedMethod("*");
+        configuration.addAllowedHeader("*");
+        configuration.setAllowCredentials(true);
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 }

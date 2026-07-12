@@ -73,29 +73,29 @@ class BudgetAllocationRepositoryTest {
         assertThat(result).isEmpty();
     }
 
-    // --- sumAssignedUpToMonth ---
+    // --- sumAllAssigned ---
 
     @Test
-    void sumAssignedUpToMonth_returnsCumulativeTotal() {
-        BigDecimal result = budgetAllocationRepository.sumAssignedUpToMonth(FEB, USER_A);
-        assertThat(result).isEqualByComparingTo("2200.00"); // 1000 + 1200
+    void sumAllAssigned_returnsTotalForUser() {
+        BigDecimal result = budgetAllocationRepository.sumAllAssigned(USER_A);
+        assertThat(result).isEqualByComparingTo("2200.00"); // 1000 (Jan) + 1200 (Feb)
     }
 
     @Test
-    void sumAssignedUpToMonth_includesOnlyMonthsUpToAndIncluding() {
-        BigDecimal result = budgetAllocationRepository.sumAssignedUpToMonth(JAN, USER_A);
-        assertThat(result).isEqualByComparingTo("1000.00");
-    }
-
-    @Test
-    void sumAssignedUpToMonth_excludesOtherUsersAllocations() {
-        BigDecimal result = budgetAllocationRepository.sumAssignedUpToMonth(FEB, USER_A);
+    void sumAllAssigned_excludesOtherUsersAllocations() {
+        BigDecimal result = budgetAllocationRepository.sumAllAssigned(USER_A);
         assertThat(result).isEqualByComparingTo("2200.00"); // does not include USER_B's 500
     }
 
     @Test
-    void sumAssignedUpToMonth_returnsZero_whenNoAllocations() {
-        BigDecimal result = budgetAllocationRepository.sumAssignedUpToMonth(JAN, "auth0|unknown");
+    void sumAllAssigned_returnsCorrectTotal_forOtherUser() {
+        BigDecimal result = budgetAllocationRepository.sumAllAssigned(USER_B);
+        assertThat(result).isEqualByComparingTo("500.00");
+    }
+
+    @Test
+    void sumAllAssigned_returnsZero_whenNoAllocations() {
+        BigDecimal result = budgetAllocationRepository.sumAllAssigned("auth0|unknown");
         assertThat(result).isEqualByComparingTo(BigDecimal.ZERO);
     }
 
