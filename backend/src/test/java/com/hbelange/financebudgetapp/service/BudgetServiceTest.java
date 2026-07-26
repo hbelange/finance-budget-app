@@ -28,11 +28,14 @@ import com.hbelange.financebudgetapp.entity.Account;
 import com.hbelange.financebudgetapp.entity.BudgetAllocation;
 import com.hbelange.financebudgetapp.entity.BudgetCategory;
 import com.hbelange.financebudgetapp.entity.CategoryGroup;
+import com.hbelange.financebudgetapp.entity.Goal;
 import com.hbelange.financebudgetapp.enums.AccountType;
+import com.hbelange.financebudgetapp.enums.RolloverType;
 import com.hbelange.financebudgetapp.repository.AccountRepository;
 import com.hbelange.financebudgetapp.repository.BudgetAllocationRepository;
 import com.hbelange.financebudgetapp.repository.BudgetCategoryRepository;
 import com.hbelange.financebudgetapp.repository.CategoryGroupRepository;
+import com.hbelange.financebudgetapp.repository.GoalRepository;
 import com.hbelange.financebudgetapp.repository.TransactionRepository;
 
 @ExtendWith(MockitoExtension.class)
@@ -43,6 +46,7 @@ class BudgetServiceTest {
     @Mock private BudgetAllocationRepository budgetAllocationRepository;
     @Mock private TransactionRepository transactionRepository;
     @Mock private AccountRepository accountRepository;
+    @Mock private GoalRepository goalRepository;
 
     @InjectMocks
     private BudgetService budgetService;
@@ -229,6 +233,141 @@ class BudgetServiceTest {
 
         var cat = result.groups().get(0).categories().get(0);
         assertFalse(cat.systemManaged());
+    }
+
+    @Test
+    void getBudget_accumulateGoal_amountNeededIsGoalMinusThisMonthAssigned() {
+        Goal goal = new Goal();
+        goal.setCategory(category);
+        goal.setAmount(new BigDecimal("100.00"));
+        goal.setDayOfMonth(1);
+        goal.setRolloverType(RolloverType.ACCUMULATE);
+
+        BudgetAllocation allocation = new BudgetAllocation();
+        allocation.setCategoryId(categoryId);
+        allocation.setMonth(LocalDate.of(2026, 5, 1));
+        allocation.setAssigned(new BigDecimal("30.00"));
+
+        when(transactionRepository.sumRtaBase(any())).thenReturn(BigDecimal.ZERO);
+        when(budgetAllocationRepository.sumAllAssigned(any())).thenReturn(BigDecimal.ZERO);
+        when(budgetAllocationRepository.findByMonthAndUserSub(any(), any())).thenReturn(List.of(allocation));
+        when(transactionRepository.findSpentByCategoryForMonth(any(), any(), any())).thenReturn(List.of());
+        when(budgetAllocationRepository.sumAssignedByCategoryThroughMonth(any(), any())).thenReturn(List.of());
+        when(transactionRepository.sumSpentByCategoryThroughMonth(any(), any())).thenReturn(List.of());
+        when(accountRepository.findByUserSubAndCcPaymentCategoryIdNotNull(USER_SUB)).thenReturn(List.of());
+        when(categoryGroupRepository.findAllByUserSubOrderBySortOrderAsc(USER_SUB)).thenReturn(List.of(group));
+        when(budgetCategoryRepository.findByGroupOrderBySortOrderAsc(group)).thenReturn(List.of(category));
+        when(goalRepository.findByCategory(category)).thenReturn(goal);
+
+        BudgetViewDTO result = budgetService.getBudget("2026-05", USER_SUB);
+
+        var cat = result.groups().get(0).categories().get(0);
+        assertEquals(new BigDecimal("70.00"), cat.amountNeeded());
+    }
+
+    @Test
+    void getBudget_accumulateGoal_amountNeededIsZero_whenThisMonthAssignedMeetsGoal() {
+        Goal goal = new Goal();
+        goal.setCategory(category);
+        goal.setAmount(new BigDecimal("100.00"));
+        goal.setDayOfMonth(1);
+        goal.setRolloverType(RolloverType.ACCUMULATE);
+
+        BudgetAllocation allocation = new BudgetAllocation();
+        allocation.setCategoryId(categoryId);
+        allocation.setMonth(LocalDate.of(2026, 5, 1));
+        allocation.setAssigned(new BigDecimal("150.00"));
+
+        when(transactionRepository.sumRtaBase(any())).thenReturn(BigDecimal.ZERO);
+        when(budgetAllocationRepository.sumAllAssigned(any())).thenReturn(BigDecimal.ZERO);
+        when(budgetAllocationRepository.findByMonthAndUserSub(any(), any())).thenReturn(List.of(allocation));
+        when(transactionRepository.findSpentByCategoryForMonth(any(), any(), any())).thenReturn(List.of());
+        when(budgetAllocationRepository.sumAssignedByCategoryThroughMonth(any(), any())).thenReturn(List.of());
+        when(transactionRepository.sumSpentByCategoryThroughMonth(any(), any())).thenReturn(List.of());
+        when(accountRepository.findByUserSubAndCcPaymentCategoryIdNotNull(USER_SUB)).thenReturn(List.of());
+        when(categoryGroupRepository.findAllByUserSubOrderBySortOrderAsc(USER_SUB)).thenReturn(List.of(group));
+        when(budgetCategoryRepository.findByGroupOrderBySortOrderAsc(group)).thenReturn(List.of(category));
+        when(goalRepository.findByCategory(category)).thenReturn(goal);
+
+        BudgetViewDTO result = budgetService.getBudget("2026-05", USER_SUB);
+
+        var cat = result.groups().get(0).categories().get(0);
+        assertEquals(BigDecimal.ZERO, cat.amountNeeded());
+    }
+
+    @Test
+    void getBudget_refillGoal_amountNeededIsGoalMinusAvailable() {
+        Goal goal = new Goal();
+        goal.setCategory(category);
+        goal.setAmount(new BigDecimal("200.00"));
+        goal.setDayOfMonth(1);
+        goal.setRolloverType(RolloverType.REFILL);
+
+        when(transactionRepository.sumRtaBase(any())).thenReturn(BigDecimal.ZERO);
+        when(budgetAllocationRepository.sumAllAssigned(any())).thenReturn(BigDecimal.ZERO);
+        when(budgetAllocationRepository.findByMonthAndUserSub(any(), any())).thenReturn(List.of());
+        when(transactionRepository.findSpentByCategoryForMonth(any(), any(), any())).thenReturn(List.of());
+        when(budgetAllocationRepository.sumAssignedByCategoryThroughMonth(any(), any()))
+            .thenReturn(List.of(new CategoryAssigned(categoryId, new BigDecimal("500.00"))));
+        when(transactionRepository.sumSpentByCategoryThroughMonth(any(), any()))
+            .thenReturn(List.of(new CategorySpent(categoryId, new BigDecimal("-350.00"))));
+        when(accountRepository.findByUserSubAndCcPaymentCategoryIdNotNull(USER_SUB)).thenReturn(List.of());
+        when(categoryGroupRepository.findAllByUserSubOrderBySortOrderAsc(USER_SUB)).thenReturn(List.of(group));
+        when(budgetCategoryRepository.findByGroupOrderBySortOrderAsc(group)).thenReturn(List.of(category));
+        when(goalRepository.findByCategory(category)).thenReturn(goal);
+
+        BudgetViewDTO result = budgetService.getBudget("2026-05", USER_SUB);
+
+        var cat = result.groups().get(0).categories().get(0);
+        // available = 500 - 350 = 150; amountNeeded = 200 - 150 = 50
+        assertEquals(new BigDecimal("50.00"), cat.amountNeeded());
+    }
+
+    @Test
+    void getBudget_refillGoal_amountNeededIsZero_whenAvailableExceedsGoal() {
+        Goal goal = new Goal();
+        goal.setCategory(category);
+        goal.setAmount(new BigDecimal("100.00"));
+        goal.setDayOfMonth(1);
+        goal.setRolloverType(RolloverType.REFILL);
+
+        when(transactionRepository.sumRtaBase(any())).thenReturn(BigDecimal.ZERO);
+        when(budgetAllocationRepository.sumAllAssigned(any())).thenReturn(BigDecimal.ZERO);
+        when(budgetAllocationRepository.findByMonthAndUserSub(any(), any())).thenReturn(List.of());
+        when(transactionRepository.findSpentByCategoryForMonth(any(), any(), any())).thenReturn(List.of());
+        when(budgetAllocationRepository.sumAssignedByCategoryThroughMonth(any(), any()))
+            .thenReturn(List.of(new CategoryAssigned(categoryId, new BigDecimal("500.00"))));
+        when(transactionRepository.sumSpentByCategoryThroughMonth(any(), any()))
+            .thenReturn(List.of(new CategorySpent(categoryId, new BigDecimal("-100.00"))));
+        when(accountRepository.findByUserSubAndCcPaymentCategoryIdNotNull(USER_SUB)).thenReturn(List.of());
+        when(categoryGroupRepository.findAllByUserSubOrderBySortOrderAsc(USER_SUB)).thenReturn(List.of(group));
+        when(budgetCategoryRepository.findByGroupOrderBySortOrderAsc(group)).thenReturn(List.of(category));
+        when(goalRepository.findByCategory(category)).thenReturn(goal);
+
+        BudgetViewDTO result = budgetService.getBudget("2026-05", USER_SUB);
+
+        var cat = result.groups().get(0).categories().get(0);
+        // available = 500 - 100 = 400, well above the 100 goal -> needed floors at zero
+        assertEquals(BigDecimal.ZERO, cat.amountNeeded());
+    }
+
+    @Test
+    void getBudget_amountNeededIsZero_whenCategoryHasNoGoal() {
+        when(transactionRepository.sumRtaBase(any())).thenReturn(BigDecimal.ZERO);
+        when(budgetAllocationRepository.sumAllAssigned(any())).thenReturn(BigDecimal.ZERO);
+        when(budgetAllocationRepository.findByMonthAndUserSub(any(), any())).thenReturn(List.of());
+        when(transactionRepository.findSpentByCategoryForMonth(any(), any(), any())).thenReturn(List.of());
+        when(budgetAllocationRepository.sumAssignedByCategoryThroughMonth(any(), any())).thenReturn(List.of());
+        when(transactionRepository.sumSpentByCategoryThroughMonth(any(), any())).thenReturn(List.of());
+        when(accountRepository.findByUserSubAndCcPaymentCategoryIdNotNull(USER_SUB)).thenReturn(List.of());
+        when(categoryGroupRepository.findAllByUserSubOrderBySortOrderAsc(USER_SUB)).thenReturn(List.of(group));
+        when(budgetCategoryRepository.findByGroupOrderBySortOrderAsc(group)).thenReturn(List.of(category));
+        when(goalRepository.findByCategory(category)).thenReturn(null);
+
+        BudgetViewDTO result = budgetService.getBudget("2026-05", USER_SUB);
+
+        var cat = result.groups().get(0).categories().get(0);
+        assertEquals(BigDecimal.ZERO, cat.amountNeeded());
     }
 
     @Test

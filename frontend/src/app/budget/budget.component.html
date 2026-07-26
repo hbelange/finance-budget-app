@@ -127,6 +127,14 @@
                       </button>
                     </td>
                   </tr>
+                  @if (cat.amountNeeded > 0) {
+                    <tr class="amount-needed-row">
+                      <td class="col-drag"></td>
+                      <td colspan="5" class="amount-needed-text">
+                        {{ cat.amountNeeded | currency }} more needed for goal.
+                      </td>
+                    </tr>
+                  }
                 }
               </tbody>
             </table>

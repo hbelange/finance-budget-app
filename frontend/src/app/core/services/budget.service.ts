@@ -9,6 +9,7 @@ export interface BudgetCategory {
   spent: number;
   available: number;
   systemManaged: boolean;
+  amountNeeded: number;
 }
 
 export interface BudgetGroup {

@@ -94,6 +94,21 @@
   tr:last-child td {
     border-bottom: none;
   }
+
+  tr:has(+ .amount-needed-row) td {
+    border-bottom: none;
+  }
+}
+
+.amount-needed-row td {
+  padding-top: 0;
+  padding-bottom: 10px;
+}
+
+.amount-needed-text {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.8rem;
+  font-style: italic;
 }
 
 .col-drag {
@@ -299,6 +314,19 @@
   .col-assigned::before { content: "Assigned"; }
   .spent::before { content: "Spent"; }
   .col-available::before { content: "Available"; }
+
+  .amount-needed-row {
+    padding-top: 0;
+  }
+
+  .amount-needed-row .col-drag {
+    display: none;
+  }
+
+  .amount-needed-text {
+    flex: 1 1 100%;
+    padding: 0 0 4px;
+  }
 
   mat-expansion-panel {
     --mat-expansion-header-collapsed-state-height: auto;
