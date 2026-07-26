@@ -10,6 +10,7 @@ import com.hbelange.financebudgetapp.service.GoalService;
 
 import jakarta.validation.Valid;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -31,6 +32,11 @@ public class GoalController {
 
     public GoalController(GoalService goalService) {
         this.goalService = goalService;
+    }
+
+    @GetMapping
+    public List<GoalDTO> getAllGoals(@AuthenticationPrincipal Jwt jwt) {
+        return goalService.getAllGoals(jwt.getSubject());
     }
 
     @PostMapping()
