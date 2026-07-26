@@ -3,7 +3,6 @@ package com.hbelange.financebudgetapp;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -27,7 +26,6 @@ public class SecurityConfig {
     @Value("${application.cors.allowed-origins}")
     private List<String> allowedOrigins;
 
-    @Autowired
     public SecurityConfig(UserProvisioningFilter userProvisioningFilter) {
         this.userProvisioningFilter = userProvisioningFilter;
     }
