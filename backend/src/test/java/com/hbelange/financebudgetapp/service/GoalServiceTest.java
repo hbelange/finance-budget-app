@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -240,5 +241,28 @@ class GoalServiceTest {
 
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
         verify(goalRepository, never()).delete(any());
+    }
+
+    @Test
+    void getAllGoals_returnsMappedDtos() {
+        when(goalRepository.findByCategory_Group_UserSub(USER_SUB)).thenReturn(List.of(goal));
+
+        List<GoalDTO> result = goalService.getAllGoals(USER_SUB);
+
+        assertEquals(1, result.size());
+        assertEquals(goal.getId(), result.get(0).id());
+        assertEquals(categoryId, result.get(0).categoryId());
+        assertEquals(new BigDecimal("200.00"), result.get(0).amount());
+        assertEquals(15, result.get(0).dayOfMonth());
+        assertEquals(RolloverType.REFILL, result.get(0).rolloverType());
+    }
+
+    @Test
+    void getAllGoals_returnsEmptyList_whenUserHasNoGoals() {
+        when(goalRepository.findByCategory_Group_UserSub(USER_SUB)).thenReturn(List.of());
+
+        List<GoalDTO> result = goalService.getAllGoals(USER_SUB);
+
+        assertTrue(result.isEmpty());
     }
 }

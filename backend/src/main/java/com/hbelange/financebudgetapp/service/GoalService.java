@@ -1,5 +1,6 @@
 package com.hbelange.financebudgetapp.service;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
@@ -15,7 +16,7 @@ import com.hbelange.financebudgetapp.repository.GoalRepository;
 
 @Service
 public class GoalService {
-    
+
     private final GoalRepository goalRepository;
     private final BudgetCategoryRepository budgetCategoryRepository;
 
@@ -28,12 +29,10 @@ public class GoalService {
         BudgetCategory category = budgetCategoryRepository.findById(goalRequest.categoryId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found"));
 
-        // Check if the category belongs to the user
         if (!category.getGroup().getUserSub().equals(userSub)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have permission to add a goal to this category");
         }
 
-        // Create and save the goal
         Goal goal = new Goal();
         goal.setCategory(category);
         goal.setAmount(goalRequest.amount());
@@ -41,14 +40,13 @@ public class GoalService {
         goal.setRolloverType(goalRequest.rolloverType());
         goal = goalRepository.save(goal);
 
-        return new GoalDTO(goal.getId(), goal.getCategory().getId(), goal.getAmount(), goal.getDayOfMonth(), goal.getRolloverType());
+        return toDto(goal);
     }
 
     public GoalDTO getGoalByCategoryId(UUID categoryId, String userSub) {
         BudgetCategory category = budgetCategoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found"));
 
-        // Check if the category belongs to the user
         if (!category.getGroup().getUserSub().equals(userSub)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have permission to view the goal for this category");
         }
@@ -59,7 +57,7 @@ public class GoalService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No goal found for this category");
         }
 
-        return new GoalDTO(goal.getId(), goal.getCategory().getId(), goal.getAmount(), goal.getDayOfMonth(), goal.getRolloverType());
+        return toDto(goal);
     }
 
     public GoalDTO updateGoal(UUID categoryId, GoalRequest goalRequest, String userSub) {
@@ -67,7 +65,6 @@ public class GoalService {
         BudgetCategory category = budgetCategoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found"));
 
-        // Check if the category belongs to the user
         if (!category.getGroup().getUserSub().equals(userSub)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have permission to update the goal for this category");
         }
@@ -78,13 +75,12 @@ public class GoalService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No goal found for this category");
         }
 
-        // Update and save the goal
         goal.setAmount(goalRequest.amount());
         goal.setDayOfMonth(goalRequest.dayOfMonth());
         goal.setRolloverType(goalRequest.rolloverType());
         goal = goalRepository.save(goal);
 
-        return new GoalDTO(goal.getId(), goal.getCategory().getId(), goal.getAmount(), goal.getDayOfMonth(), goal.getRolloverType());
+        return toDto(goal);
     }
 
     public void deleteGoal(UUID categoryId, String userSub) {
@@ -103,5 +99,13 @@ public class GoalService {
         }
 
         goalRepository.delete(goal);
+    }
+
+    public List<GoalDTO> getAllGoals(String userSub) {
+        return goalRepository.findByCategory_Group_UserSub(userSub).stream().map(this::toDto).toList();
+    }
+
+    private GoalDTO toDto(Goal goal) {
+        return new GoalDTO(goal.getId(), goal.getCategory().getId(), goal.getAmount(), goal.getDayOfMonth(), goal.getRolloverType());
     }
 }

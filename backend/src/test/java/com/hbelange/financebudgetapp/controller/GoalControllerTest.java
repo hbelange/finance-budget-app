@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
@@ -164,5 +165,26 @@ class GoalControllerTest {
 
         mockMvc.perform(delete("/api/goals/" + CATEGORY_ID).with(jwt()))
             .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void getAllGoals_returns200WithList() throws Exception {
+        GoalDTO dto = new GoalDTO(GOAL_ID, CATEGORY_ID, new BigDecimal("200.00"), 15, RolloverType.REFILL);
+        when(goalService.getAllGoals(any())).thenReturn(List.of(dto));
+
+        mockMvc.perform(get("/api/goals").with(jwt()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].id").value(GOAL_ID.toString()))
+            .andExpect(jsonPath("$[0].categoryId").value(CATEGORY_ID.toString()));
+    }
+
+    @Test
+    void getAllGoals_returns200WithEmptyList_whenNoGoals() throws Exception {
+        when(goalService.getAllGoals(any())).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/goals").with(jwt()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$").isArray())
+            .andExpect(jsonPath("$").isEmpty());
     }
 }
