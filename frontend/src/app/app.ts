@@ -114,6 +114,7 @@ export class App {
     if (url.startsWith('/dashboard')) return 'Dashboard';
     if (/^\/accounts\/[^/]+\/transactions/.test(url)) return 'Transactions';
     if (url.startsWith('/accounts')) return 'Accounts';
+    if (url.startsWith('/goals')) return 'Goals';
     return 'Budget';
   });
 
