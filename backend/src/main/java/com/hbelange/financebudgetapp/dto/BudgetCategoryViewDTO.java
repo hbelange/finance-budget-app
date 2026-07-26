@@ -9,5 +9,6 @@ public record BudgetCategoryViewDTO(
     BigDecimal assigned,
     BigDecimal spent,
     BigDecimal available,
-    boolean systemManaged
+    boolean systemManaged,
+    BigDecimal amountNeeded
 ) {}
