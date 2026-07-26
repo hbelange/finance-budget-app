@@ -1,0 +1,48 @@
+@if (isLoading()) {
+  <app-loading-spinner [isLoading]="isLoading()" [isWakingUp]="isWakingUp()" loadingText="Loading goals..."></app-loading-spinner>
+} @else {
+  <div class="goal-groups">
+    @for (group of groups(); track group.id) {
+      <mat-expansion-panel expanded>
+        <mat-expansion-panel-header>
+          <mat-panel-title>{{ group.name }}</mat-panel-title>
+        </mat-expansion-panel-header>
+
+        <table class="category-table">
+          <thead>
+            <tr>
+              <th class="col-name">Category</th>
+              <th class="col-goal">Goal</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (cat of group.categories; track cat.id) {
+              <tr>
+                <td class="col-name">{{ cat.name }}</td>
+                <td class="col-goal">
+                  @if (cat.goal; as goal) {
+                    <span class="goal-amount">{{ goal.amount | currency }}</span>
+                    <button mat-icon-button [attr.aria-label]="'Edit goal for ' + cat.name"
+                      (click)="openEditGoal(cat)">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                    <button mat-icon-button [attr.aria-label]="'Delete goal for ' + cat.name"
+                      (click)="confirmDeleteGoal(cat)">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  } @else {
+                    <button mat-button [attr.aria-label]="'Add goal for ' + cat.name"
+                      (click)="openAddGoal(cat)">
+                      <mat-icon>add</mat-icon>
+                      Add Goal
+                    </button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </mat-expansion-panel>
+    }
+  </div>
+}
