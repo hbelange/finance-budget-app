@@ -96,8 +96,9 @@ public class BudgetService {
                         // If REFILL, amountNeeded = goal - available
                         Goal goal = goalRepository.findByCategory(c);
                         BigDecimal amountNeeded = BigDecimal.ZERO;
-
+                        int dayOfMonth = 0;
                         if (goal != null) {
+                            dayOfMonth = goal.getDayOfMonth();
                             if (goal.getRolloverType() == RolloverType.ACCUMULATE) {
                                 BigDecimal assigned = assignedByCategory.getOrDefault(c.getId(), BigDecimal.ZERO);
                                 amountNeeded = goal.getAmount().subtract(assigned).max(BigDecimal.ZERO);
@@ -109,7 +110,7 @@ public class BudgetService {
                         }
 
                         return buildCategoryView(c, ccPaymentCategoryToAccount, assignedByCategory, spentByCategory,
-                        cumulativeAssignedByCategory, cumulativeSpentByCategory, lastDay, amountNeeded);
+                        cumulativeAssignedByCategory, cumulativeSpentByCategory, lastDay, amountNeeded, dayOfMonth);
                     })
                     .collect(Collectors.toList());
                 return new BudgetGroupDTO(g.getId(), g.getName(), cats);
@@ -125,19 +126,20 @@ public class BudgetService {
             Map<UUID, BigDecimal> cumulativeAssignedByCategory,
             Map<UUID, BigDecimal> cumulativeSpentByCategory,
             LocalDate lastDay,
-            BigDecimal amountNeeded) {
+            BigDecimal amountNeeded,
+            int dayOfMonth) {
         if (ccPaymentCategoryToAccount.containsKey(c.getId())) {
             UUID accountId = ccPaymentCategoryToAccount.get(c.getId());
             BigDecimal balance = transactionRepository.sumForAccount(accountId, lastDay);
             BigDecimal owed = balance.negate().max(BigDecimal.ZERO);
-            return new BudgetCategoryViewDTO(c.getId(), c.getName(), BigDecimal.ZERO, BigDecimal.ZERO, owed, true, BigDecimal.ZERO);
+            return new BudgetCategoryViewDTO(c.getId(), c.getName(), BigDecimal.ZERO, BigDecimal.ZERO, owed, true, BigDecimal.ZERO, dayOfMonth);
         }
         BigDecimal assigned = assignedByCategory.getOrDefault(c.getId(), BigDecimal.ZERO);
         BigDecimal spent = spentByCategory.getOrDefault(c.getId(), BigDecimal.ZERO);
         BigDecimal cumulativeAssigned = cumulativeAssignedByCategory.getOrDefault(c.getId(), BigDecimal.ZERO);
         BigDecimal cumulativeSpent = cumulativeSpentByCategory.getOrDefault(c.getId(), BigDecimal.ZERO);
         BigDecimal available = cumulativeAssigned.add(cumulativeSpent);
-        return new BudgetCategoryViewDTO(c.getId(), c.getName(), assigned, spent, available, false, amountNeeded);
+        return new BudgetCategoryViewDTO(c.getId(), c.getName(), assigned, spent, available, false, amountNeeded, dayOfMonth);
     }
 
     @Transactional

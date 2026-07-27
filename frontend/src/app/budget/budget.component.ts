@@ -55,6 +55,13 @@ export default class BudgetComponent {
   protected isLoading = signal(false);
   protected isWakingUp = signal(false);
 
+  protected convertDayOfMonthToString(dayOfMonth: number): string {
+    if (dayOfMonth === 1) return '1st';
+    if (dayOfMonth === 2) return '2nd';
+    if (dayOfMonth === 3) return '3rd';
+    return `${dayOfMonth}th`;
+  }
+
   protected groupTotal(group: BudgetGroup): number {
     return group.categories.reduce((sum, c) => sum + c.assigned, 0);
   }
@@ -228,7 +235,7 @@ export default class BudgetComponent {
         this.categoryService.addCategory(group.id, name).subscribe({
           next: (categoryGroup) => this.budgetView.update(v => !v ? v : {
             ...v,
-            groups: v.groups.map(g => g.id === group.id ? { ...g, categories : [...g.categories, {...categoryGroup.categories.slice(-1)[0], assigned: 0, spent: 0, available: 0, systemManaged: false, amountNeeded: 0 } ] } : g)
+            groups: v.groups.map(g => g.id === group.id ? { ...g, categories : [...g.categories, {...categoryGroup.categories.slice(-1)[0], assigned: 0, spent: 0, available: 0, systemManaged: false, amountNeeded: 0 , dayOfMonth: 0 } ] } : g)
           }),
           error: () => this.snackBar.open('Failed to create category.', 'OK', { duration: 5000 }),
         });

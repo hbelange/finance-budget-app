@@ -10,6 +10,7 @@ export interface BudgetCategory {
   available: number;
   systemManaged: boolean;
   amountNeeded: number;
+  dayOfMonth: number;
 }
 
 export interface BudgetGroup {
