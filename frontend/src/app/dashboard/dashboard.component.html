@@ -49,7 +49,11 @@
         @for (item of data.spending; track item.categoryId) {
           <div class="spending-row">
             <span class="spending-name">{{ item.categoryName }}</span>
-            <mat-progress-bar mode="determinate" [value]="item.progress"></mat-progress-bar>
+            <mat-progress-bar
+              mode="determinate"
+              [value]="item.progress"
+              [style.--mat-progress-bar-active-indicator-color]="item.meterColor"
+            ></mat-progress-bar>
             <span class="spending-amount">{{ item.spent | currency }}</span>
           </div>
         }
