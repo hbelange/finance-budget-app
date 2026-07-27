@@ -1,3 +1,5 @@
+@use '@angular/material' as mat;
+
 :host {
   display: block;
   height: 100%;
@@ -7,19 +9,47 @@ mat-sidenav-container {
   height: 100%;
 }
 
+// The sidenav is the app's "ledger spine" — a solid dark rail that anchors
+// every page, styled independently of the light content surfaces.
 mat-sidenav {
-  width: 220px;
+  width: 232px;
+
+  @include mat.sidenav-overrides((
+    container-background-color: var(--brand-forest),
+    container-text-color: var(--brand-mist),
+    container-shape: 0,
+  ));
+
+  @include mat.list-overrides((
+    list-item-label-text-color: var(--brand-mist),
+    list-item-hover-label-text-color: #ffffff,
+    list-item-hover-state-layer-color: #ffffff,
+  ));
 }
 
 .sidenav-header {
-  padding: 16px;
-  font-size: 1rem;
-  font-weight: 500;
-  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  padding: 22px 20px;
+  font-family: var(--app-font-display);
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--brand-mist);
+  border-bottom: 1px solid rgba(216, 243, 220, 0.14);
 }
 
 .toolbar-spacer {
   flex: 1;
+}
+
+mat-toolbar {
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+}
+
+.page-title {
+  font-family: var(--app-font-display);
+  font-size: 1.3rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .mobile-month-bar {

@@ -5,18 +5,80 @@
 // custom components at https://material.angular.dev/guide/theming
 @use '@angular/material' as mat;
 
+// Brand palette (client-supplied): a light-to-dark growth ramp, used both as
+// the source for the Material theme below and directly via the named custom
+// properties for the one signature element (the growth-gradient meter).
+:root {
+  --brand-mist: #d8f3dc;
+  --brand-sage: #b7e4c7;
+  --brand-fern: #95d5b2;
+  --brand-meadow: #74c69d;
+  --brand-moss: #52b788;
+  --brand-pine: #40916c;
+  --brand-spruce: #2d6a4f;
+  --brand-forest: #1b4332;
+  --brand-canopy: #081c15;
+
+  // Display face reserved for hero dollar figures only — body copy and every
+  // table cell stay on the plain/body typeface for scannability.
+  --app-font-display: 'Fraunces', 'Times New Roman', serif;
+
+  // Single source of truth for "this number is good" across every page.
+  // Kept distinct from --mat-sys-primary so red can stay the one non-green
+  // signal in the palette for negative amounts.
+  --app-positive: var(--brand-spruce);
+}
+
 html {
   height: 100%;
   @include mat.theme(
     (
       color: (
-        primary: mat.$azure-palette,
-        tertiary: mat.$blue-palette,
+        primary: mat.$green-palette,
+        tertiary: mat.$green-palette,
       ),
-      typography: Roboto,
+      typography: (
+        plain-family: Inter,
+        brand-family: Inter,
+      ),
       density: 0,
     )
   );
+
+  // Material generates a full tonal scale algorithmically from $green-palette;
+  // pin the roles that carry brand identity and text contrast to the client's
+  // exact hex values, and leave the rest (elevation, state, shape) generated.
+  --mat-sys-primary: var(--brand-spruce);
+  --mat-sys-on-primary: #ffffff;
+  --mat-sys-primary-container: var(--brand-sage);
+  --mat-sys-on-primary-container: #0d3b26;
+
+  --mat-sys-secondary: var(--brand-pine);
+  --mat-sys-on-secondary: #ffffff;
+  --mat-sys-secondary-container: var(--brand-mist);
+  --mat-sys-on-secondary-container: var(--brand-forest);
+
+  --mat-sys-tertiary: var(--brand-meadow);
+  --mat-sys-on-tertiary: #0d2b1c;
+  --mat-sys-tertiary-container: #ecf9f0;
+  --mat-sys-on-tertiary-container: var(--brand-forest);
+
+  --mat-sys-background: #fafdfb;
+  --mat-sys-on-background: #14261d;
+  --mat-sys-surface: #ffffff;
+  --mat-sys-on-surface: #14261d;
+  --mat-sys-surface-container-lowest: #ffffff;
+  --mat-sys-surface-container-low: #f5faf6;
+  --mat-sys-surface-container: #eef7f1;
+  --mat-sys-surface-container-high: #e3f1e8;
+  --mat-sys-surface-container-highest: var(--brand-mist);
+  --mat-sys-surface-variant: #dcebe2;
+  --mat-sys-on-surface-variant: #3f5b4d;
+  --mat-sys-outline: #7a9a89;
+  --mat-sys-outline-variant: #cbe3d4;
+
+  // --mat-sys-error and friends are intentionally left untouched — red is the
+  // one non-green signal in this palette and must stay that way.
 }
 
 body {
@@ -37,6 +99,18 @@ body {
   height: 100%;
 }
 /* You can add global styles to this file, and also import other style files */
+
+.mat-mdc-card {
+  border-radius: 12px !important;
+  box-shadow: 0 1px 2px rgba(8, 28, 21, 0.06), 0 4px 12px rgba(8, 28, 21, 0.05) !important;
+}
+
+// Pill-shaped growth meters (see dashboard's spending-by-category list).
+@include mat.progress-bar-overrides((
+  track-height: 6px,
+  active-indicator-height: 6px,
+  track-shape: 999px,
+));
 
 @media (max-width: 599px) {
   .mat-mdc-dialog-panel {

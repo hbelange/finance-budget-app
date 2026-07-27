@@ -11,6 +11,16 @@ import { AppLoadingSpinnerComponent } from '../shared/app-loading-spinner';
 
 interface SpendingRow extends SpendingByCategoryDto {
   progress: number;
+  meterColor: string;
+}
+
+// Brand growth ramp, light to dark. A category's share of this month's
+// spending picks its stop, so the biggest spend reads as the deepest green.
+const GROWTH_RAMP = ['#95d5b2', '#74c69d', '#52b788', '#40916c', '#2d6a4f'];
+
+function growthColor(progress: number): string {
+  const index = Math.min(GROWTH_RAMP.length - 1, Math.floor(progress / 20));
+  return GROWTH_RAMP[index];
 }
 
 interface DashboardData {
@@ -49,10 +59,10 @@ export default class DashboardComponent {
         this.isLoading.set(false);
         this.isWakingUp.set(false);
         const total = spending.reduce((sum, c) => sum + c.spent, 0);
-        const rows: SpendingRow[] = spending.map(c => ({
-          ...c,
-          progress: total === 0 ? 0 : (c.spent / total) * 100,
-        }));
+        const rows: SpendingRow[] = spending.map(c => {
+          const progress = total === 0 ? 0 : (c.spent / total) * 100;
+          return { ...c, progress, meterColor: growthColor(progress) };
+        });
         this.dashboardData.set({ dashboard, spending: rows });
       },
       error: () => {

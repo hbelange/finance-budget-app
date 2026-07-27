@@ -60,7 +60,7 @@ mat-table {
 }
 
 .positive {
-  color: #2e7d32;
+  color: var(--app-positive);
 }
 
 .negative {
@@ -68,7 +68,7 @@ mat-table {
 }
 
 .cleared {
-  color: #2e7d32;
+  color: var(--app-positive);
 }
 
 .uncleared {

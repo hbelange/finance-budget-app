@@ -30,7 +30,7 @@ a {
 }
 
 .positive {
-  color: #2e7d32;
+  color: var(--app-positive);
 }
 
 .negative {
