@@ -75,4 +75,11 @@ mat-toolbar {
 .mat-mdc-list-item.active-link {
   background-color: var(--mat-sys-secondary-container);
   color: var(--mat-sys-on-secondary-container);
+
+  // mat-list renders label text via its own CSS custom property on an inner
+  // element, not via inherited `color` — override it directly, for both the
+  // resting and hover states, or the sidenav-wide light-on-dark text color
+  // (set above for the rest of the nav) wins and the pill goes invisible.
+  --mat-list-list-item-label-text-color: var(--mat-sys-on-secondary-container);
+  --mat-list-list-item-hover-label-text-color: var(--mat-sys-on-secondary-container);
 }
