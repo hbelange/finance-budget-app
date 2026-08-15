@@ -28,6 +28,20 @@ logs/
 .env.local
 .env.*.local
 
+# Credentials & secrets
+*.pem
+*.key
+*.p12
+*.jks
+*.keystore
+id_rsa*
+application-local.properties
+application-secrets.properties
+credentials.json
+secrets.yml
+secrets.yaml
+*.tfvars
+
 # Node (for future frontend)
 node_modules/
 dist/
