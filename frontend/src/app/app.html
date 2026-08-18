@@ -11,6 +11,10 @@
   </mat-sidenav>
 
   <mat-sidenav-content>
+    @if (isDemoUser()) {
+      <div class="demo-banner">Demo account — data resets hourly.</div>
+    }
+
     <mat-toolbar>
       @if (isMobile()) {
         <button mat-icon-button (click)="sidenav.toggle()" aria-label="Open navigation menu">

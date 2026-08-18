@@ -36,6 +36,8 @@ fi
 # --- Spring Boot ---
 echo "Starting Spring Boot..."
 cd "$ROOT/backend"
+export DEMO_ENABLED=true
+echo "DEMO_ENABLED=$DEMO_ENABLED"
 ./mvnw spring-boot:run &
 
 echo "Waiting for Spring Boot to be ready..."
