@@ -4,7 +4,9 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.hbelange.financebudgetapp.dto.AccountBalance;
@@ -30,4 +32,10 @@ public interface AccountRepository extends JpaRepository<Account, UUID> {
     List<Account> findByUserSubAndCcPaymentCategoryIdNotNull(String userSub);
 
     boolean existsByCcPaymentCategoryId(UUID ccPaymentCategoryId);
+
+    // See TransactionRepository.deleteByAccount_UserSub for why this is a hand-written bulk
+    // delete rather than a plain derived one.
+    @Modifying
+    @Query("DELETE FROM Account a WHERE a.userSub = :userSub")
+    void deleteByUserSub(@Param("userSub") String userSub);
 }

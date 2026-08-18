@@ -14,6 +14,7 @@ import { MatIcon } from '@angular/material/icon';
 import { AuthService } from '@auth0/auth0-angular';
 import { BudgetStateService } from './core/services/budget-state.service';
 import { LayoutService } from './core/services/layout.service';
+import { environment } from '../environments/environment';
 
 interface DateBounds { first: string | null; last: string | null; }
 
@@ -92,6 +93,11 @@ export class App {
 
   protected readonly isLoading = toSignal(this.auth.isLoading$, { initialValue: true });
   protected readonly isAuthenticated = toSignal(this.auth.isAuthenticated$, { initialValue: false });
+
+  protected readonly isDemoUser = toSignal(
+    this.auth.user$.pipe(map(user => user?.email === environment.demoUserEmail)),
+    { initialValue: false }
+  );
 
   protected readonly selectedMonth = toSignal(this.budgetState.month$, { requireSync: true });
 
