@@ -6,6 +6,19 @@ Built as a personal project to replace spreadsheets and learn full-stack Java + 
 
 ---
 
+## Live Demo
+
+**[finance-budget-app-swart.vercel.app](https://finance-budget-app-swart.vercel.app)**
+
+| | |
+|---|---|
+| Email | `demo@fba.example` |
+| Password | `fbaDem0!` |
+
+Shared demo account, seeded with 3 months of sample data. Resets hourly, so don't be surprised if your changes disappear — that's expected. The backend is on Render's free tier and may take a few seconds to wake up on first load.
+
+---
+
 ## What it does
 
 - **Accounts** — track checking, savings, credit cards, and cash accounts; balance computed live from transactions
