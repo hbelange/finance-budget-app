@@ -28,4 +28,8 @@ public interface BudgetCategoryRepository extends JpaRepository<BudgetCategory, 
     @Modifying
     @Query("DELETE FROM BudgetCategory bc WHERE bc.group.id = :groupId")
     void deleteByGroupId(@Param("groupId") UUID groupId);
+
+    @Modifying
+    @Query("DELETE FROM BudgetCategory bc WHERE bc.group.userSub = :userSub")
+    void deleteByGroupUserSub(@Param("userSub") String userSub);
 }

@@ -4,4 +4,5 @@ export const environment = {
     clientId: 'zrNyDmsA2dLqjUfvRQMw6vesD2HhKg8V',
     audience: 'https://finance-budget-api',
   },
+  demoUserEmail: 'demo@fba.example',
 };
