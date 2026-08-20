@@ -17,6 +17,8 @@ Built as a personal project to replace spreadsheets and learn full-stack Java + 
 
 Shared demo account, seeded with 3 months of sample data. Resets hourly, so don't be surprised if your changes disappear — that's expected. The backend is on Render's free tier and may take a few seconds to wake up on first load.
 
+![Budget view walkthrough](docs/images/demo.gif)
+
 ---
 
 ## What it does
@@ -57,6 +59,12 @@ Shared demo account, seeded with 3 months of sample data. Resets hourly, so don'
 ```
 
 Single server, single database, managed auth. No queues, no cache, no microservices. Designed for one user, deliberately boring.
+
+**Auth: buy, not build.** Auth0 handles signup, login, password resets, and token issuance. Rolling my own auth means owning password hashing, reset-token flows, and session security — a lot of surface area for a single-user app where auth isn't the interesting problem. Auth0's free tier covers this scale entirely.
+
+**Stateless JWT, not server-side sessions.** The backend validates a bearer token on every request instead of maintaining session state in a store. This keeps the API server stateless — no session table, no sticky sessions, no shared session cache to provision if it ever scaled beyond one instance. The tradeoff is that revoking a token before it expires isn't instant, which is an acceptable risk for a personal finance app with no other users.
+
+**Render + Vercel, not a self-managed EC2 box.** A single EC2 instance would mean owning OS patching, process supervision, TLS certificate renewal, and deploy scripting myself. Render and Vercel's free tiers push a `git push` straight to a running URL with managed TLS and restarts. The cost is a cold-start delay after 15 minutes of inactivity on Render's free plan — traded deliberately for zero ops overhead on a project with no SLA.
 
 ---
 
@@ -156,5 +164,4 @@ frontend/src/app/
 
 ## What's next
 
-- **Deployment** — backend on Render, frontend on Vercel, Auth0 wired to production URLs
-- **Database backup** — daily pg_dump once the production instance is settled
+- **Database backup** — daily `pg_dump` to durable storage; currently relying on Render's free-tier backup retention
