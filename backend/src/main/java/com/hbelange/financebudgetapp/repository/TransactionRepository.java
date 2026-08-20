@@ -9,6 +9,7 @@ import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -74,4 +75,16 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
     /** Returns null when the user has no transactions — expected behavior for an aggregate with no rows. */
     @Query("SELECT MAX(t.date) FROM Transaction t WHERE t.account.userSub = :userSub")
     LocalDate findMaxDate(@Param("userSub") String userSub);
+
+    // A plain derived "deleteBy" here only stages entity removals in the Hibernate session rather
+    // than issuing an immediate SQL DELETE — Hibernate's auto-flush before a later bulk @Query
+    // delete (e.g. BudgetCategoryRepository.deleteByGroupUserSub) only flushes pending changes
+    // whose "query space" (table) overlaps the query being run, so a pending Transaction removal
+    // doesn't get flushed before a DELETE FROM budget_categories, and Postgres's FK constraint
+    // trips even though this deletes first in the calling code. A hand-written bulk delete avoids
+    // the ambiguity entirely by executing immediately (see GoalRepository.deleteByCategoryGroupUserSub
+    // for the same fix applied to a different table).
+    @Modifying
+    @Query("DELETE FROM Transaction t WHERE t.account.userSub = :userSub")
+    void deleteByAccount_UserSub(@Param("userSub") String userSub);
 }
