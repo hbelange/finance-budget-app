@@ -107,6 +107,7 @@ export default class BudgetComponent {
           ...c,
           assigned: newAssigned,
           available: c.available + delta,
+          amountNeeded: c.dayOfMonth > 0 ? Math.max(0, c.amountNeeded - delta) : c.amountNeeded,
         }),
       }),
     });
@@ -124,6 +125,7 @@ export default class BudgetComponent {
               ...c,
               assigned: cat.assigned,
               available: c.available - delta,
+              amountNeeded: c.dayOfMonth > 0 ? Math.max(0, c.amountNeeded + delta) : c.amountNeeded,
             }),
           }),
         });

@@ -1,8 +1,8 @@
 # Finance Budget App
 
-A YNAB-style personal finance and budget tracker. Zero-based budgeting: every dollar gets assigned to a category before you spend it.
+A personal finance and budget tracker. Zero-based budgeting, so every dollar gets assigned to a category before you spend it.
 
-Built as a personal project to replace spreadsheets and learn full-stack Java + Angular end to end.
+Built as a personal project to replace spreadsheets and learn full-stack Spring Boot + Angular end to end.
 
 ---
 
@@ -17,6 +17,8 @@ Built as a personal project to replace spreadsheets and learn full-stack Java + 
 
 Shared demo account, seeded with 3 months of sample data. Resets hourly, so don't be surprised if your changes disappear — that's expected. The backend is on Render's free tier and may take a few seconds to wake up on first load.
 
+![Budget view walkthrough](docs/images/demo.gif)
+
 ---
 
 ## What it does
@@ -24,6 +26,7 @@ Shared demo account, seeded with 3 months of sample data. Resets hourly, so don'
 - **Accounts** — track checking, savings, credit cards, and cash accounts; balance computed live from transactions
 - **Transaction ledger** — paginated and filterable by account and month; inflows/outflows color-coded
 - **Budget view** — assign money to categories each month; Ready to Assign header shows unallocated dollars (turns red when overspent)
+- **Goal Setting** - set goals for existing categories each month. Goals can be refill up to, or accumulate/set aside another X dollars
 - **Category management** — create groups and categories, rename or delete them inline
 - **Dashboard** — monthly summary: net worth, income, spending, and a spending-by-category breakdown with progress bars
 - **Auth** — Auth0-managed login; Spring Boot validates JWTs as an OAuth2 resource server
@@ -35,12 +38,12 @@ Shared demo account, seeded with 3 months of sample data. Resets hourly, so don'
 | Layer | Technology | Why |
 |---|---|---|
 | Backend | Java 21 + Spring Boot 3.x | Familiar, production-grade, strong type system for financial logic |
-| Build | Maven | Conventional Java build; Flyway migration support built in |
-| Database | PostgreSQL 16 (Docker) | Best ecosystem, scales further than I'll ever need, free-tier hostable |
+| Build | Maven | Conventional Java build |
+| Database | PostgreSQL (Neon DB) | Free-tier hostable |
 | Schema migrations | Flyway | Reproducible, versioned schema — no manual SQL on every setup |
-| Frontend | Angular 21 (standalone) | Component model fits the domain; Angular Material covers the UI kit |
+| Frontend | Angular 21 | Component model fits the domain; Angular Material for the UI |
 | Auth | Auth0 | Managed auth — not rolling my own session/token handling |
-| Deployment | Render (backend + DB), Vercel (frontend) | Free tier, zero ops overhead |
+| Deployment | Render (backend), Vercel (frontend) | Free tier, zero ops overhead |
 
 ---
 
@@ -57,6 +60,12 @@ Shared demo account, seeded with 3 months of sample data. Resets hourly, so don'
 ```
 
 Single server, single database, managed auth. No queues, no cache, no microservices. Designed for one user, deliberately boring.
+
+**Auth: buy, not build.** Auth0 handles signup, login, password resets, and token issuance. Rolling my own auth means owning password hashing, reset-token flows, and session security — a lot of surface area for a personal app where auth isn't the main learning goal. Auth0's free tier covers this scale entirely.
+
+**Stateless JWT** The backend validates a bearer token on every request instead of maintaining session state in a store. This keeps the API server stateless — no session table, no sticky sessions, no shared session cache to provision if it ever scaled beyond one instance. The tradeoff is that revoking a token before it expires isn't instant, which is an acceptable risk for a personal project.
+
+**Render + Vercel** Render and Vercel's free tiers push a `git push` straight to a running URL with managed TLS and restarts. The cost is a cold-start delay after 15 minutes of inactivity on Render's free plan — traded deliberately for zero ops overhead on a project where learning Spring Boot + Angular was the main priority.
 
 ---
 
@@ -89,72 +98,8 @@ No NgModules. Each component declares its own imports. Easier to read, easier to
 
 - **Zero-based budgeting is harder to model than it looks.** "Ready to Assign" — the dollars available to budget — is `cumulative_income - total_assigned`. It accumulates across all past months, not just the current one. Getting this calculation right (and keeping it consistent with per-category `available` values) took a few iterations.
 
-- **Spring Data JPA is great until you need aggregate queries.** For the budget view and reports, I needed `SUM` across multiple tables. Rather than forcing that into Spring Data interfaces, I used `EntityManager` with JPQL directly. One data access pattern per project is enough.
+- **Spring Data JPA is great until you need aggregate queries.** For the budget view and reports, I needed `SUM` across multiple tables. Rather than forcing that into Spring Data interfaces, I used `EntityManager` with JPQL directly.
 
-- **Angular Material's reactive form model pays off.** The budget inline-edit fields, dialog forms, and date pickers all share the same `FormGroup` / `FormControl` pattern. Validation, disabled states, and error messages come for free once you understand the model.
+- **Angular Material's reactive form model was great** The budget inline-edit fields, dialog forms, and date pickers all share the same `FormGroup` / `FormControl` pattern. Validation, disabled states, and error messages are easy to implement.
 
-- **Deployment is where the "it works locally" assumptions break.** CORS headers, database connection string format, Auth0 callback URLs, environment variable injection — none of this is hard, but all of it has to be right at the same time. Building the walking skeleton first (empty app, deployed, connected to DB) meant I hit these early rather than at the end.
-
----
-
-## Running locally
-
-**Prerequisites:** Java 21, Node 20+, Docker
-
-```bash
-# Start PostgreSQL
-docker run -d --name budget-postgres \
-  -e POSTGRES_DB=budget -e POSTGRES_USER=budget -e POSTGRES_PASSWORD=budget \
-  -p 5432:5432 postgres:16
-
-# Backend (applies Flyway migrations automatically)
-./mvnw spring-boot:run
-
-# Frontend (proxies /api to localhost:8080)
-cd frontend && npm install && npx ng serve
-```
-
-Open `http://localhost:4200`.
-
-**Convenience scripts:**
-```bash
-./start.sh   # starts backend + frontend together
-./stop.sh    # stops them
-```
-
-**Access the database directly:**
-```bash
-docker exec -it budget-postgres psql -U budget
-```
-
----
-
-## Project structure
-
-```
-backend/
-  src/main/java/com/hbelange/financebudgetapp/
-    controller/     # REST endpoints
-    service/        # Business logic
-    repository/     # JPA + EntityManager queries
-    entity/         # JPA entities
-    dto/            # Request/response shapes
-    enums/          # AccountType, etc.
-  src/main/resources/
-    db/migration/   # Flyway V1-V9 SQL migrations
-
-frontend/src/app/
-  accounts/         # Accounts list + dialog
-  transactions/     # Transaction ledger
-  budget/           # Budget view + category management
-  dashboard/        # Monthly summary
-  core/services/    # AccountService, BudgetService, etc.
-  shared/           # Shared components
-```
-
----
-
-## What's next
-
-- **Deployment** — backend on Render, frontend on Vercel, Auth0 wired to production URLs
-- **Database backup** — daily pg_dump once the production instance is settled
+- **Deployment can take some time to set up** CORS headers, database connection string format, Auth0 callback URLs, environment variable injection — none of this is hard, but all of it has to be right at the same time. Building the walking skeleton first (empty app, deployed, connected to DB) meant I hit these early rather than at the end, when mental fatigue was inenvitable.
